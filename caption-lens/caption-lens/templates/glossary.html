@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Glossary{% endblock %}
+{% block content %}
+<section><div class="container">
+<h2 class="mb-2">Glossary</h2>
+<p class="muted mb-4">Plain-language meanings of the technical terms. Add more in <code>data/glossary.json</code>.</p>
+<input id="q" class="form-control mb-4" placeholder="Search terms" aria-label="Search glossary">
+<div class="row g-3">{% for t in terms %}<div class="col-md-6 gl"><div class="card-x h-100"><h3 class="h6">{{ t.term }}</h3><p class="muted mb-0">{{ t.definition }}</p></div></div>{% endfor %}</div>
+</div></section>
+{% endblock %}
+{% block scripts %}<script>
+document.getElementById("q").addEventListener("input", e => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll(".gl").forEach(c => c.classList.toggle("d-none", !c.textContent.toLowerCase().includes(q)));
+});
+</script>{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Demo{% endblock %}
+{% block content %}
+<section id="demo">
+  <div class="container">
+    <h2 class="mb-4">Try it on your own image</h2>
+    <div class="card-x">
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose or drop an image">
+            <div id="prompt" class="p-4">
+              <i class="bi bi-cloud-arrow-up big"></i>
+              <h3 class="h5 mt-3">Drop an image here</h3>
+              <p class="muted mb-0">or click to browse (JPG, PNG, WebP, up to 10 MB)</p>
+            </div>
+            <div class="frame d-none p-2" id="frame"><img id="preview" alt="Your uploaded image"></div>
+          </div>
+          <input type="file" id="file" accept="image/jpeg,image/png,image/webp" hidden>
+          <div class="mt-4">
+            <label for="beams" class="form-label">Beam size: <b id="beamOut">5</b></label>
+            <input type="range" class="form-range" id="beams" min="1" max="10" value="5">
+            <div class="form-text muted">Higher values try more candidate sentences and are a little slower.</div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-lens flex-grow-1" id="go" disabled>Generate captions</button>
+            <button class="btn btn-ghost" id="reset" disabled>Clear</button>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div id="status" class="muted mb-3" role="status" aria-live="polite">Choose an image to begin.</div>
+          <div class="alert alert-warning d-none" id="banner" role="alert"></div>
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="result blip">
+                <div class="d-flex justify-content-between"><span class="tag"><i class="bi bi-stars me-1"></i>BLIP (pre-trained)</span><button class="copy" data-t="capA" aria-label="Copy BLIP caption"><i class="bi bi-clipboard"></i></button></div>
+                <div class="cap idle" id="capA">The caption will appear here.</div>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="result gru">
+                <div class="d-flex justify-content-between"><span class="tag"><i class="bi bi-cpu me-1"></i>Our CNN + 2-layer GRU</span><button class="copy" data-t="capB" aria-label="Copy GRU caption"><i class="bi bi-clipboard"></i></button></div>
+                <div class="cap idle" id="capB">The caption will appear here.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/demo.js') }}"></script>{% endblock %}

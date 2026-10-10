@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}Caption Studio{% endblock %}
+
+{% block content %}
+<div class="studio-workspace-wrapper">
+  <div class="container-fluid studio-container">
+    
+    <!-- Studio Header Bar -->
+    <div class="studio-topbar">
+      <div class="studio-breadcrumb">
+        <span class="studio-live-badge"><span class="pulse-dot"></span> LIVE GPU STUDIO</span>
+        <span class="studio-title-text">Caption Lens Inference Workbench</span>
+        <span class="studio-subtext d-none d-md-inline">Multi-Tier Multimodal Evaluation Engine</span>
+      </div>
+
+      <div class="studio-system-pill d-none d-lg-flex">
+        <i class="bi bi-cpu-fill text-cyan"></i>
+        <span>NVIDIA GeForce RTX 4050 (6GB VRAM)</span>
+        <span class="sep">&bull;</span>
+        <span class="text-success font-mono">CUDA 12.6</span>
+      </div>
+    </div>
+
+    <!-- Main Studio Grid -->
+    <div class="row g-4 studio-main-grid">
+      
+      <!-- Left Column: Input Console -->
+      <div class="col-lg-5 col-xl-4 studio-input-col">
+        <div class="studio-panel studio-input-panel">
+          
+          <div class="panel-section-title">
+            <i class="bi bi-image text-cyan"></i>
+            <span>Visual Input Matrix</span>
+          </div>
+
+          <!-- Dropzone -->
+          <div class="studio-dropzone" id="dropzone" role="button" tabindex="0" aria-label="Drop or choose an image file">
+            <div class="dropzone-prompt text-center" id="dropzonePrompt">
+              <div class="dropzone-icon-circle">
+                <i class="bi bi-cloud-arrow-up-fill"></i>
+              </div>
+              <h5 class="mt-3 mb-1">Upload Test Image</h5>
+              <p class="text-secondary mb-2" style="font-size: 0.85rem;">Drag & drop or click to browse</p>
+              <span class="dropzone-format-badge">JPG &bull; PNG &bull; WEBP (MAX 15 MB)</span>
+            </div>
+            
+            <div class="studio-preview-frame d-none" id="previewFrame">
+              <img id="imagePreview" alt="Uploaded preview">
+            </div>
+          </div>
+
+          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" hidden>
+
+          <!-- Quick Samples -->
+          <div class="studio-sample-section">
+            <div class="sample-label-bar">
+              <span>Quick Test Presets:</span>
+            </div>
+            <div class="sample-chips-grid">
+              <button class="sample-chip" data-sample="beach.jpg" title="Mountain View over Water">
+                <i class="bi bi-image-fill"></i> Mountain Vista
+              </button>
+              <button class="sample-chip" data-sample="car.jpg" title="Vintage Automobile">
+                <i class="bi bi-car-front-fill"></i> Vintage Car
+              </button>
+              <button class="sample-chip" data-sample="dog.jpg" title="Black Dog in Yard">
+                <i class="bi bi-heart-fill"></i> Dog on Bench
+              </button>
+              <button class="sample-chip" data-sample="city.jpg" title="City Waterfront">
+                <i class="bi bi-buildings-fill"></i> City Waterfront
+              </button>
+              <button class="sample-chip" data-sample="reading.jpg" title="Reading Photo">
+                <i class="bi bi-book-fill"></i> Outdoor Statue
+              </button>
+            </div>
+          </div>
+
+          <!-- Beam Width Slider -->
+          <div class="studio-controls-section">
+            <div class="beam-header d-flex justify-content-between align-items-center mb-1">
+              <span class="control-label">Beam Search Width: <strong class="text-cyan font-mono" id="beamVal">5</strong></span>
+              <span class="text-tertiary font-mono" id="beamDesc" style="font-size: 0.75rem;">Balanced optimal</span>
+            </div>
+            <input type="range" class="form-range studio-slider" id="beamSlider" min="1" max="10" value="5">
+            <div class="d-flex justify-content-between text-tertiary font-mono" style="font-size: 0.7rem;">
+              <span>1 (Greedy)</span>
+              <span>5 (Optimal)</span>
+              <span>10 (Exhaustive)</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="studio-actions mt-3">
+            <button class="btn-primary-lens w-100 justify-content-center py-2 fs-6" id="btnGenerate" disabled>
+              <i class="bi bi-lightning-charge-fill me-1"></i>
+              <span>Generate Multimodal Captions</span>
+            </button>
+            <button class="btn-ghost-lens w-100 justify-content-center mt-2 py-2" id="btnReset" disabled>
+              <i class="bi bi-arrow-counterclockwise me-1"></i>
+              <span>Clear Workspace</span>
+            </button>
+          </div>
+
+          <!-- Status Bar -->
+          <div class="studio-status-strip mt-3" id="statusBar">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText" class="status-message">Select a preset or upload an image to start.</span>
+          </div>
+
+          <div class="alert alert-warning d-none mt-2" id="errorBanner" role="alert"></div>
+
+        </div>
+      </div>
+
+      <!-- Right Column: Multi-Tier Model Comparison Cards -->
+      <div class="col-lg-7 col-xl-8 studio-output-col">
+        <div class="studio-panel studio-results-panel">
+          
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="panel-section-title mb-0">
+              <i class="bi bi-layers-half text-cyan"></i>
+              <span>Multimodal Inference Synthesis</span>
+            </div>
+            <span class="badge rounded-pill studio-tier-tag">
+              <i class="bi bi-check2-circle text-success me-1"></i> 3-Tier Comparative Suite
+            </span>
+          </div>
+
+          <!-- Model 1: Salesforce BLIP -->
+          <div class="studio-card blip-theme">
+            <div class="studio-card-header">
+              <div class="d-flex align-items-center gap-2">
+                <span class="model-badge blip-badge">
+                  <i class="bi bi-stars"></i>
+                  <span>Salesforce BLIP</span>
+                </span>
+                <span class="model-meta-pill">Foundation Benchmark</span>
+                <span class="model-param-pill">223M Params &bull; ViT-B/16 + Med</span>
+              </div>
+              <button class="copy-btn" data-target="captionBlip" title="Copy caption"><i class="bi bi-clipboard"></i></button>
+            </div>
+            <div class="studio-caption-display empty" id="captionBlip">Generated BLIP caption will appear here...</div>
+            <div class="studio-card-footer">
+              <div class="model-timing-pill" id="timingBlip">Latency: — ms</div>
+              <span class="model-desc-hint">Zero-shot multimodal foundation model with patch self-attention</span>
+            </div>
+          </div>
+
+          <!-- Model 2: Our Vision Transformer + GPT-2 -->
+          <div class="studio-card vit-theme">
+            <div class="studio-card-header">
+              <div class="d-flex align-items-center gap-2">
+                <span class="model-badge vit-badge">
+                  <i class="bi bi-lightning-charge-fill"></i>
+                  <span>Our Vision-Language Model</span>
+                </span>
+                <span class="model-meta-pill text-success" style="border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1);">AI & DS Core</span>
+                <span class="model-param-pill">239M Params &bull; ViT + GPT-2 Cross-Attention</span>
+              </div>
+              <button class="copy-btn" data-target="captionVit" title="Copy caption"><i class="bi bi-clipboard"></i></button>
+            </div>
+            <div class="studio-caption-display empty" id="captionVit">Vision Transformer caption will appear here...</div>
+            <div class="studio-card-footer">
+              <div class="model-timing-pill" id="timingVit">Latency: — ms</div>
+              <span class="model-desc-hint">Trained Vision-Encoder-Decoder with regional cross-attention visual grounding</span>
+            </div>
+          </div>
+
+          <!-- Model 3: Ablation Baseline (CNN + GRU) -->
+          <div class="studio-card gru-theme">
+            <div class="studio-card-header">
+              <div class="d-flex align-items-center gap-2">
+                <span class="model-badge gru-badge">
+                  <i class="bi bi-cpu"></i>
+                  <span>Ablation Baseline: CNN + GRU</span>
+                </span>
+                <span class="model-meta-pill text-warning" style="border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1);">Classical RNN</span>
+                <span class="model-param-pill">ResNet-50 + 2-Layer GRU &bull; Flickr8k</span>
+              </div>
+              <button class="copy-btn" data-target="captionGru" title="Copy caption"><i class="bi bi-clipboard"></i></button>
+            </div>
+            <div class="studio-caption-display empty" id="captionGru">Custom GRU caption will appear here...</div>
+            <div class="studio-card-footer">
+              <div class="model-timing-pill" id="timingGru">Latency: — ms</div>
+              <span class="model-desc-hint">Global pooled visual bottleneck baseline (demonstrates language prior bias)</span>
+            </div>
+          </div>
+
+          <!-- Academic Protocol Callout -->
+          <div class="studio-protocol-bar">
+            <i class="bi bi-shield-check text-cyan me-2"></i>
+            <span><strong>Scientific Verification Protocol:</strong> All three neural architectures execute inference concurrently on local NVIDIA GPU tensors with identical beam parameters.</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+<!-- Minimalist, screenshot-optimized status footer -->
+<footer class="studio-clean-footer">
+  <div class="container-fluid d-flex justify-content-between align-items-center">
+    <div class="studio-footer-meta">
+      <span class="brand-text text-cyan">Caption Lens Studio</span>
+      <span class="sep">&bull;</span>
+      <span>University Data Science Lab Mini-Project (BE-IT / AI & DS)</span>
+      <span class="sep">&bull;</span>
+      <span>100% Local Inference &bull; Zero Cloud APIs</span>
+    </div>
+    <div class="studio-footer-actions">
+      <a href="{{ url_for('research') }}" class="studio-footer-link"><i class="bi bi-graph-up me-1"></i> Research Metrics</a>
+      <span class="sep">&bull;</span>
+      <a href="{{ url_for('about') }}" class="studio-footer-link"><i class="bi bi-info-circle me-1"></i> Methodology</a>
+    </div>
+  </div>
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/demo.js') }}"></script>
+{% endblock %}

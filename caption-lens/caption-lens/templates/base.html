@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Home{% endblock %} | Caption Lens</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@500;700;800&display=swap" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg sticky-top">
+  <div class="container">
+    <a class="navbar-brand brand" href="{{ url_for('index') }}"><i class="bi bi-camera-fill me-2"></i>Caption Lens</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse justify-content-end" id="nav">
+      <ul class="navbar-nav gap-lg-2">
+        {% for ep, label in nav %}<li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint == ep }}" href="{{ url_for(ep) }}">{{ label }}</a></li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</nav>
+<main>{% block content %}{% endblock %}</main>
+<footer>
+  <div class="container text-center">
+    <div class="mb-2"><span class="badge-t">Python</span><span class="badge-t">PyTorch</span><span class="badge-t">Transformers</span><span class="badge-t">BLIP</span><span class="badge-t">ResNet-50 + GRU</span><span class="badge-t">Pillow</span><span class="badge-t">Bootstrap</span></div>
+    <small>University mini-project. Free, open-source tools and no paid APIs.</small>
+    <div class="sig">Prepared by Muneeb Sawez, Kaushik Parvate &nbsp;|&nbsp; Guide: Dr. Zainab Mirza &nbsp;|&nbsp; Department of Computer Science / Data Science Laboratory</div>
+  </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

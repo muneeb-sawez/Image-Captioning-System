@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}About{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="mb-5 pb-3 border-bottom" style="border-color: var(--border-subtle) !important;">
+    <span class="section-eyebrow">Academic Project Context</span>
+    <h1 class="display-5 fw-bold mb-3">About Caption Lens</h1>
+    <p class="lead text-secondary" style="max-width: 760px;">
+      An applied research mini-project investigating deep visual feature extraction, multimodal alignment, and recurrent natural language sequence decoding.
+    </p>
+  </div>
+
+  <div class="row g-4 mb-5">
+    <!-- Project & Team Card -->
+    <div class="col-lg-6">
+      <div class="p-4 rounded-4" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); height: 100%;">
+        <div class="d-flex align-items-center gap-2 mb-3 text-cyan font-mono" style="font-size: 0.8rem;">
+          <i class="bi bi-person-badge"></i>
+          <span>PROJECT CREDITS</span>
+        </div>
+        <h3 class="h4 fw-bold mb-3">University Mini-Project</h3>
+        
+        <div class="mb-3">
+          <div class="text-tertiary font-mono" style="font-size: 0.75rem;">RESEARCH STUDENTS</div>
+          <div class="fw-semibold text-light">Muneeb Sawez</div>
+          <div class="fw-semibold text-light">Kaushik Parvate</div>
+        </div>
+
+        <div class="mb-3">
+          <div class="text-tertiary font-mono" style="font-size: 0.75rem;">PROJECT SUPERVISOR / GUIDE</div>
+          <div class="fw-semibold text-light">Dr. Zainab Mirza</div>
+        </div>
+
+        <div class="mb-3">
+          <div class="text-tertiary font-mono" style="font-size: 0.75rem;">INSTITUTION & DEPARTMENT</div>
+          <div class="text-secondary">Department of Computer Science / Data Science Laboratory</div>
+        </div>
+
+        <div class="pt-2">
+          <span class="badge bg-secondary" style="font-size: 0.75rem;">Academic Year 2026</span>
+          <span class="badge bg-dark border border-secondary ms-1" style="font-size: 0.75rem;">Open-Source Implementation</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compute & Environment Card -->
+    <div class="col-lg-6">
+      <div class="p-4 rounded-4" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); height: 100%;">
+        <div class="d-flex align-items-center gap-2 mb-3 text-cyan font-mono" style="font-size: 0.8rem;">
+          <i class="bi bi-gpu-card"></i>
+          <span>HARDWARE & LOCAL EXECUTION</span>
+        </div>
+        <h3 class="h4 fw-bold mb-3">Zero Cloud Dependencies</h3>
+        <p class="text-secondary" style="font-size: 0.92rem;">
+          Unlike commercial web services that rely on paid cloud inference APIs, Caption Lens runs entirely on consumer workstation hardware:
+        </p>
+        <ul class="text-secondary" style="font-size: 0.88rem;">
+          <li><strong>Workstation GPU:</strong> NVIDIA GeForce RTX 4050 Laptop GPU (6GB VRAM)</li>
+          <li><strong>Inference Runtimes:</strong> PyTorch 2.14.0 with CUDA 12.6 acceleration</li>
+          <li><strong>Offline Model Checkpoint:</strong> Self-trained <code>gru_best.pt</code> (~27.6 MB)</li>
+          <li><strong>No External API Fees:</strong> Fully reproducible open-source stack</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Responsible AI & Privacy -->
+  <div class="p-4 rounded-4 mb-5" style="background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+    <div class="d-flex align-items-center gap-2 mb-2 text-warning font-mono" style="font-size: 0.8rem;">
+      <i class="bi bi-shield-check"></i>
+      <span>RESPONSIBLE AI & DATA PRIVACY</span>
+    </div>
+    <h3 class="h5 fw-bold mb-2">Ethics, Privacy, and Dataset Bias</h3>
+    <p class="text-secondary mb-2" style="font-size: 0.92rem;">
+      Vision-language models learn associative priors directly from human web annotations. The captions generated may occasionally inherit social, cultural, or geographic biases present in the Flickr8k training corpus.
+    </p>
+    <p class="text-secondary mb-0" style="font-size: 0.92rem;">
+      <strong>Privacy Protection:</strong> All uploaded photos submitted through the demo console are held strictly in temporary RAM during the PyTorch forward pass and are discarded immediately upon response delivery. No user images are recorded to disk or collected.
+    </p>
+  </div>
+</div>
+{% endblock %}

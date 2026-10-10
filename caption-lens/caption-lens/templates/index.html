@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="hero" id="top">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6">
+        <h1 class="seq" style="--d:1">Show it a photo.<br>Get a sentence.</h1>
+        <p class="lead seq mt-4" style="--d:2">Upload any image and two models describe it: BLIP, a pre-trained vision-language model, and our own CNN + GRU trained from scratch. Everything runs on your machine.</p>
+        <div class="d-flex flex-wrap gap-3 mt-4 seq" style="--d:3">
+          <a href="{{ url_for('demo') }}" class="btn btn-lens btn-lg">Caption an image</a>
+          <a href="{{ url_for('how') }}" class="btn btn-ghost btn-lg">How it works</a>
+        </div>
+      </div>
+      <div class="col-lg-6 seq" style="--d:4">
+        <div class="vf" role="img" aria-label="Sample scene with a caption being typed">
+          <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+          <span class="scan"></span>
+          <div class="chip" id="heroCap" aria-live="off"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+<section id="about" style="padding-top:1rem">
+  <div class="container">
+    <div class="row g-4 mb-4">
+      <div class="col-lg-4"><div class="card-x h-100"><h3 class="h5">The problem</h3><p class="muted mb-0">Computers see pixels, people read sentences. The system must recognize what is in a picture and say it in grammatical English, for example "A dog is running in a grassy park."</p></div></div>
+      <div class="col-lg-4"><div class="card-x h-100"><h3 class="h5">Our approach</h3><p class="muted mb-0">We use a pre-trained BLIP model as a working captioner, then train our own CNN + GRU captioner and measure how close it gets. No paid APIs are used.</p></div></div>
+      <div class="col-lg-4"><div class="card-x h-100"><h3 class="h5">What this page does</h3><p class="muted mb-0">It is the front end for the project: upload an image, see both models' captions side by side, and review the evaluation results.</p></div></div>
+    </div>
+    <dl class="spec mb-0">
+      <div><dt>Dataset</dt><dd>Flickr8k, 8,000 images</dd></div>
+      <div><dt>Encoder</dt><dd>ResNet-50, frozen</dd></div>
+      <div><dt>Decoder</dt><dd>2-layer GRU, 512 hidden</dd></div>
+      <div><dt>Baseline</dt><dd>BLIP base</dd></div>
+    </dl>
+  </div>
+</section>
+<section style="padding-top:0"><div class="container"><div class="row g-4">
+{% for ep, t, d in [('demo','Try the demo','Upload an image and compare the two captions.'),('how','How it works','The pipeline and the two-model design.'),('models','Models and training','Dataset, GRU settings, and the training log.'),('results','Results','Scores, sample captions, and limitations.')] %}
+<div class="col-md-6 col-lg-3"><a class="card-x d-block h-100 text-decoration-none" href="{{ url_for(ep) }}"><h3 class="h5 text-white">{{ t }}</h3><p class="muted mb-0">{{ d }}</p></a></div>
+{% endfor %}
+</div></div></section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/hero.js') }}"></script>{% endblock %}

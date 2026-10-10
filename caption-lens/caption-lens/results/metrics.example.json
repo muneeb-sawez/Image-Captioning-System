@@ -1,0 +1,20 @@
+{
+  "gru_greedy": {
+    "bleu1": null,
+    "bleu4": null,
+    "agreement": null,
+    "manual": null
+  },
+  "gru_beam": {
+    "bleu1": null,
+    "bleu4": null,
+    "agreement": null,
+    "manual": null
+  },
+  "blip": {
+    "bleu1": null,
+    "bleu4": null,
+    "agreement": null,
+    "manual": null
+  }
+}

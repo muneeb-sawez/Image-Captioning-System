@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caption Lens: image captioning with BLIP and a custom GRU</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0D1126;--panel:#151A38;--line:#2A3166;--lens:#43E0F0;--amber:#FFB84D;--lilac:#8E83FF;--text:#E9ECFF;--muted:#A3AAD6;
+--bs-body-bg:var(--ink);--bs-body-color:var(--text);--bs-body-font-family:'DM Sans',system-ui,sans-serif;--bs-border-color:var(--line)}
+body{background:radial-gradient(900px 500px at 85% -5%,#2a2f7a55,transparent 60%),radial-gradient(700px 400px at -10% 30%,#0e6a7a33,transparent 60%),var(--ink)}
+h1,h2,h3,.brand{font-family:'Sora',sans-serif;letter-spacing:-.02em}
+.muted{color:var(--muted)}
+:focus-visible{outline:3px solid var(--amber)!important;outline-offset:3px}
+.navbar{background:#0D1126cc;backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.brand{font-weight:800;color:var(--text)!important}.brand i{color:var(--lens)}
+.nav-link{color:var(--muted)}.nav-link:hover{color:var(--text)}
+.btn-lens{background:var(--lens);color:#04202a;font-weight:700;border:0;border-radius:.8rem;padding:.8rem 1.4rem;transition:transform .15s,box-shadow .15s}
+.btn-lens:hover:not(:disabled){background:#7aeaf5;color:#04202a;transform:translateY(-2px);box-shadow:0 10px 30px #43e0f044}
+.btn-lens:disabled{background:#2a3166;color:#7f87b8}
+.btn-ghost{border:1px solid var(--line);color:var(--text);border-radius:.8rem;padding:.8rem 1.2rem}.btn-ghost:hover{border-color:var(--lens);color:var(--lens)}
+
+/* ---------- Hero: one orchestrated load sequence ---------- */
+.hero{padding:5rem 0 4rem}
+.hero h1{font-size:clamp(2.6rem,6vw,4.6rem);font-weight:800;line-height:1.02}
+.hero .lead{max-width:34rem;color:var(--muted)}
+.seq{opacity:0;transform:translateY(18px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc(var(--d)*.12s)}
+@keyframes rise{to{opacity:1;transform:none}}
+.vf{position:relative;aspect-ratio:4/3;border-radius:1.4rem;overflow:hidden;border:1px solid var(--line);box-shadow:0 30px 80px #000a,0 0 0 8px #151a3866;
+background:radial-gradient(circle at 72% 26%,#ffd98a 0 8%,transparent 8.5%),linear-gradient(#27327f,#e58a8a 62%,#ffb84d 63%)}
+.vf::before,.vf::after{content:"";position:absolute;left:-10%;right:-10%;border-radius:50% 50% 0 0}
+.vf::before{bottom:-8%;height:42%;background:#12304a}.vf::after{bottom:-16%;height:34%;background:#0b1f33}
+.corner{position:absolute;width:34px;height:34px;border:3px solid var(--lens);z-index:3;animation:pulse 2.4s ease-in-out infinite}
+.corner.tl{top:14px;left:14px;border-right:0;border-bottom:0}.corner.tr{top:14px;right:14px;border-left:0;border-bottom:0}
+.corner.bl{bottom:14px;left:14px;border-right:0;border-top:0}.corner.br{bottom:14px;right:14px;border-left:0;border-top:0}
+@keyframes pulse{50%{opacity:.35;transform:scale(.92)}}
+.scan{position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--lens),transparent);box-shadow:0 0 24px 6px #43e0f088;z-index:4;animation:scan 3.2s ease-in-out infinite}
+@keyframes scan{0%,100%{top:6%}50%{top:92%}}
+.chip{position:absolute;left:5%;right:5%;bottom:6%;z-index:5;background:#0D1126e6;border:1px solid var(--line);border-radius:.9rem;padding:.7rem 1rem;font-weight:500;min-height:3rem}
+.chip::after,.cap::after{content:"";display:inline-block;width:2px;height:1.1em;background:var(--amber);margin-left:3px;vertical-align:-.15em;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ---------- Pipeline (a true sequence, so numbered) ---------- */
+section{padding:4.5rem 0}
+.pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;position:relative}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:1rem;padding:1.3rem;opacity:.25;transform:translateY(14px);transition:all .6s cubic-bezier(.2,.7,.2,1);transition-delay:calc(var(--i)*.25s)}
+.pipe.on .step{opacity:1;transform:none;border-color:#43e0f055}
+.step i{font-size:1.8rem;color:var(--lens)}.step b{color:var(--amber);font-family:'Sora'}
+.step p{margin:.4rem 0 0;font-size:.92rem;color:var(--muted)}
+@media(max-width:991px){.pipe{grid-template-columns:1fr}}
+
+/* ---------- Demo ---------- */
+.card-x{background:var(--panel);border:1px solid var(--line);border-radius:1.3rem;padding:1.5rem}
+.drop{border:2px dashed var(--line);border-radius:1rem;min-height:300px;display:grid;place-items:center;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative;overflow:hidden}
+.drop:hover,.drop.over{border-color:var(--lens);background:#43e0f00d}
+.drop i.big{font-size:3rem;color:var(--lens);display:block;animation:float 3s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-8px)}}
+.drop img{max-width:100%;max-height:360px;display:block;border-radius:.7rem}
+.frame{position:relative;display:inline-block}
+.frame.busy::after{content:"";position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--lens),transparent);box-shadow:0 0 24px 6px #43e0f088;animation:scan 1.4s ease-in-out infinite}
+.frame.busy img{filter:saturate(.7) brightness(.85)}
+.result{background:#0D1126;border:1px solid var(--line);border-radius:1rem;padding:1.1rem;height:100%}
+.result .tag{font-size:.82rem;color:var(--muted)}
+.cap{font-size:1.2rem;font-weight:500;min-height:3.4rem;margin:.5rem 0}
+.cap.idle::after{display:none}
+.result.blip{border-top:3px solid var(--lens)}.result.gru{border-top:3px solid var(--lilac)}
+.sk{height:14px;border-radius:7px;background:linear-gradient(90deg,#1b2147 25%,#2a3166 50%,#1b2147 75%);background-size:200%;animation:sh 1.2s linear infinite;margin:.7rem 0}
+@keyframes sh{to{background-position:-200% 0}}
+.form-range::-webkit-slider-thumb{background:var(--lens)}.form-range::-moz-range-thumb{background:var(--lens)}
+.copy{background:none;border:0;color:var(--muted)}.copy:hover{color:var(--lens)}
+
+/* ---------- Metrics ---------- */
+.metric{text-align:left}.metric .n{font-family:'Sora';font-size:2.6rem;font-weight:800;color:var(--amber)}
+footer{border-top:1px solid var(--line);padding:2rem 0;color:var(--muted)}
+.badge-t{background:#1b2147;border:1px solid var(--line);color:var(--text);font-weight:500;padding:.5rem .8rem;border-radius:2rem;margin:.2rem}
+.spec{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:1rem;overflow:hidden}
+.spec div{background:var(--panel);padding:1.1rem 1.2rem}.spec dt{font-weight:400;color:var(--muted);font-size:.85rem}.spec dd{margin:.2rem 0 0;font-family:'Sora';font-weight:700}
+@media(max-width:767px){.spec{grid-template-columns:1fr 1fr}}
+.lane{background:var(--panel);border:1px solid var(--line);border-radius:1.1rem;padding:1.2rem 1.4rem;margin-bottom:1rem}
+.lane.a{border-left:4px solid var(--lens)}.lane.b{border-left:4px solid var(--lilac)}.lane.c{border-left:4px solid var(--amber)}
+.lane h3{font-size:1rem;margin-bottom:.8rem}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem}
+.flow span{background:#0D1126;border:1px solid var(--line);border-radius:.7rem;padding:.55rem .9rem;font-weight:500}
+.flow span.new{border-color:var(--lilac);box-shadow:0 0 0 3px #8e83ff22}.flow span.out{background:var(--amber);color:#2a1a00;border-color:var(--amber);font-weight:700}
+.flow i{color:var(--muted)}
+.tbl{--bs-table-bg:transparent;--bs-table-color:var(--text);margin:0}.tbl th{color:var(--muted);font-weight:500;border-color:var(--line)}.tbl td{border-color:var(--line)}
+.lim li{margin-bottom:.4rem;color:var(--muted)}
+.sig{border-top:1px dashed var(--line);margin-top:1.2rem;padding-top:1rem;font-size:.9rem}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.seq{opacity:1;transform:none}.step{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg sticky-top">
+  <div class="container">
+    <a class="navbar-brand brand" href="#top"><i class="bi bi-camera-fill me-2"></i>Caption Lens</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse justify-content-end" id="nav">
+      <ul class="navbar-nav gap-lg-2">
+        <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+        <li class="nav-item"><a class="nav-link" href="#how">Pipeline</a></li>
+        <li class="nav-item"><a class="nav-link" href="#architecture">Models</a></li>
+        <li class="nav-item"><a class="nav-link" href="#demo">Try it</a></li>
+        <li class="nav-item"><a class="nav-link" href="#results">Results</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6">
+        <h1 class="seq" style="--d:1">Show it a photo.<br>Get a sentence.</h1>
+        <p class="lead seq mt-4" style="--d:2">Upload any image and two models describe it: BLIP, a pre-trained vision-language model, and our own CNN + GRU trained from scratch. Everything runs on your machine.</p>
+        <div class="d-flex flex-wrap gap-3 mt-4 seq" style="--d:3">
+          <a href="#demo" class="btn btn-lens btn-lg">Caption an image</a>
+          <a href="#how" class="btn btn-ghost btn-lg">How it works</a>
+        </div>
+      </div>
+      <div class="col-lg-6 seq" style="--d:4">
+        <div class="vf" role="img" aria-label="Sample scene with a caption being typed">
+          <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+          <span class="scan"></span>
+          <div class="chip" id="heroCap" aria-live="off"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="about" style="padding-top:1rem">
+  <div class="container">
+    <div class="row g-4 mb-4">
+      <div class="col-lg-4"><div class="card-x h-100"><h3 class="h5">The problem</h3><p class="muted mb-0">Computers see pixels, people read sentences. The system must recognize what is in a picture and say it in grammatical English, for example "A dog is running in a grassy park."</p></div></div>
+      <div class="col-lg-4"><div class="card-x h-100"><h3 class="h5">Our approach</h3><p class="muted mb-0">We use a pre-trained BLIP model as a working captioner, then train our own CNN + GRU captioner and measure how close it gets. No paid APIs are used.</p></div></div>
+      <div class="col-lg-4"><div class="card-x h-100"><h3 class="h5">What this page does</h3><p class="muted mb-0">It is the front end for the project: upload an image, see both models' captions side by side, and review the evaluation results.</p></div></div>
+    </div>
+    <dl class="spec mb-0">
+      <div><dt>Dataset</dt><dd>Flickr8k, 8,000 images</dd></div>
+      <div><dt>Encoder</dt><dd>ResNet-50, frozen</dd></div>
+      <div><dt>Decoder</dt><dd>2-layer GRU, 512 hidden</dd></div>
+      <div><dt>Baseline</dt><dd>BLIP base</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section id="how">
+  <div class="container">
+    <h2 class="mb-2">From pixels to words in five steps</h2>
+    <p class="muted mb-4">The same pipeline runs for both models.</p>
+    <div class="pipe" id="pipe">
+      <div class="step" style="--i:0"><b>1</b><br><i class="bi bi-image"></i><h3 class="h6 mt-2">Input image</h3><p>You upload a JPG, PNG, or WebP file.</p></div>
+      <div class="step" style="--i:1"><b>2</b><br><i class="bi bi-sliders"></i><h3 class="h6 mt-2">Preprocessing</h3><p>Pillow converts to RGB, then the image is resized and normalized.</p></div>
+      <div class="step" style="--i:2"><b>3</b><br><i class="bi bi-eye"></i><h3 class="h6 mt-2">Vision model</h3><p>BLIP's vision transformer or ResNet-50 turns the image into features.</p></div>
+      <div class="step" style="--i:3"><b>4</b><br><i class="bi bi-chat-text"></i><h3 class="h6 mt-2">Language generation</h3><p>The decoder writes the caption one word at a time with beam search.</p></div>
+      <div class="step" style="--i:4"><b>5</b><br><i class="bi bi-check2-circle"></i><h3 class="h6 mt-2">Caption</h3><p>Both captions appear side by side so you can compare them.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="architecture">
+  <div class="container">
+    <h2 class="mb-2">Two models, one evaluation</h2>
+    <p class="muted mb-4">Track A is used as is. Track B is trained by us, and its decoder is the part we built.</p>
+    <div class="lane a"><h3>Track A: pre-trained</h3><div class="flow"><span>Image</span><i class="bi bi-chevron-right"></i><span>BLIP vision transformer</span><i class="bi bi-chevron-right"></i><span>BLIP text decoder</span><i class="bi bi-chevron-right"></i><span class="out">Caption</span></div></div>
+    <div class="lane b"><h3>Track B: trained from scratch</h3><div class="flow"><span>Image</span><i class="bi bi-chevron-right"></i><span>ResNet-50 (frozen)</span><i class="bi bi-chevron-right"></i><span class="new">2-layer GRU (trained by us)</span><i class="bi bi-chevron-right"></i><span class="out">Caption</span></div></div>
+    <div class="lane c"><h3>Evaluation</h3><div class="flow"><span>BLEU-1 to 4 against human captions</span><span>Agreement with BLIP</span><span>Manual rating, 1 to 5</span><span>CLIPScore (optional)</span></div></div>
+  </div>
+</section>
+
+<section id="demo">
+  <div class="container">
+    <h2 class="mb-4">Try it on your own image</h2>
+    <div class="card-x">
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose or drop an image">
+            <div id="prompt" class="p-4">
+              <i class="bi bi-cloud-arrow-up big"></i>
+              <h3 class="h5 mt-3">Drop an image here</h3>
+              <p class="muted mb-0">or click to browse (JPG, PNG, WebP, up to 10 MB)</p>
+            </div>
+            <div class="frame d-none p-2" id="frame"><img id="preview" alt="Your uploaded image"></div>
+          </div>
+          <input type="file" id="file" accept="image/jpeg,image/png,image/webp" hidden>
+          <div class="mt-4">
+            <label for="beams" class="form-label">Beam size: <b id="beamOut">5</b></label>
+            <input type="range" class="form-range" id="beams" min="1" max="10" value="5">
+            <div class="form-text muted">Higher values try more candidate sentences and are a little slower.</div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-lens flex-grow-1" id="go" disabled>Generate captions</button>
+            <button class="btn btn-ghost" id="reset" disabled>Clear</button>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div id="status" class="muted mb-3" role="status" aria-live="polite">Choose an image to begin.</div>
+          <div class="alert alert-warning d-none" id="banner" role="alert"></div>
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="result blip">
+                <div class="d-flex justify-content-between"><span class="tag"><i class="bi bi-stars me-1"></i>BLIP (pre-trained)</span><button class="copy" data-t="capA" aria-label="Copy BLIP caption"><i class="bi bi-clipboard"></i></button></div>
+                <div class="cap idle" id="capA">The caption will appear here.</div>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="result gru">
+                <div class="d-flex justify-content-between"><span class="tag"><i class="bi bi-cpu me-1"></i>Our CNN + 2-layer GRU</span><button class="copy" data-t="capB" aria-label="Copy GRU caption"><i class="bi bi-clipboard"></i></button></div>
+                <div class="cap idle" id="capB">The caption will appear here.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="results">
+  <div class="container">
+    <h2 class="mb-2">How well do they do?</h2>
+    <p class="muted mb-4">Fill these in from your <code>evaluate.py</code> results. Values left at 0 show a dash.</p>
+    <div class="row g-4">
+      <div class="col-6 col-lg-3"><div class="card-x metric"><div class="n" data-value="0">–</div><div class="muted">GRU BLEU-1</div></div></div>
+      <div class="col-6 col-lg-3"><div class="card-x metric"><div class="n" data-value="0">–</div><div class="muted">GRU BLEU-4</div></div></div>
+      <div class="col-6 col-lg-3"><div class="card-x metric"><div class="n" data-value="0">–</div><div class="muted">BLIP BLEU-4</div></div></div>
+      <div class="col-6 col-lg-3"><div class="card-x metric"><div class="n" data-value="0">–</div><div class="muted">GRU agreement with BLIP</div></div></div>
+    </div>
+    <div class="row g-4 mt-1">
+      <div class="col-lg-7"><div class="card-x"><h3 class="h5 mb-3">Comparison on the test set</h3>
+        <div class="table-responsive"><table class="table tbl align-middle"><thead><tr><th>Model</th><th>BLEU-1</th><th>BLEU-4</th><th>Agreement</th><th>Manual</th></tr></thead>
+        <tbody><tr><td>GRU, greedy</td><td>–</td><td>–</td><td>–</td><td>–</td></tr><tr><td>GRU, beam search</td><td>–</td><td>–</td><td>–</td><td>–</td></tr><tr><td>BLIP base</td><td>–</td><td>–</td><td class="muted">reference</td><td>–</td></tr></tbody></table></div>
+        <p class="muted small mb-0">Results pending: filled in after evaluation on the held-out test images.</p></div></div>
+      <div class="col-lg-5"><div class="card-x h-100"><h3 class="h5 mb-3">Limitations</h3>
+        <ul class="lim ps-3 mb-0"><li>BLIP saw far more training data, so it is a strong reference rather than a fair contest.</li><li>Our GRU is trained on 8,000 images and may give generic captions.</li><li>BLEU can penalize correct captions that use different words, so we also rate captions by hand.</li></ul></div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container text-center">
+    <div class="mb-2"><span class="badge-t">Python</span><span class="badge-t">PyTorch</span><span class="badge-t">Transformers</span><span class="badge-t">BLIP</span><span class="badge-t">ResNet-50 + GRU</span><span class="badge-t">Pillow</span><span class="badge-t">Bootstrap</span></div>
+    <small>University mini-project. Free, open-source tools and no paid APIs.</small>
+    <div class="sig">Prepared by Muneeb Sawez, Kaushik Parvate &nbsp;|&nbsp; Guide: Dr. Zainab Mirza &nbsp;|&nbsp; Department of Computer Science / Data Science Laboratory</div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* Backend contract (Flask/FastAPI):
+   POST API_URL, multipart form with fields "image" (file) and "beams" (int).
+   Respond with JSON: {"blip": "caption text", "gru": "caption text"}.
+   If the server can't be reached, the page falls back to labelled sample captions. */
+const API_URL = "http://127.0.0.1:5000/api/caption";
+const $ = s => document.querySelector(s);
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let file = null, url = null;
+
+/* typewriter (cancels any earlier run on the same element) */
+function type(el, text){
+  const id = el._id = (el._id || 0) + 1;
+  el.classList.remove("idle"); el.textContent = "";
+  return new Promise(res => {
+    if (reduced){ el.textContent = text; return res(); }
+    let i = 0;
+    (function step(){
+      if (el._id !== id) return res();
+      el.textContent = text.slice(0, ++i);
+      i < text.length ? setTimeout(step, 26) : res();
+    })();
+  });
+}
+
+/* hero: loops through sample captions */
+(async function hero(){
+  const lines = ["a dog is running in a grassy park", "a sunset over the hills", "two people walking along a beach"];
+  const el = $("#heroCap");
+  for (let i = 0; ; i = (i + 1) % lines.length){
+    await type(el, lines[i]);
+    await new Promise(r => setTimeout(r, 2200));
+  }
+})();
+
+/* reveal the pipeline once, in order */
+new IntersectionObserver((e, o) => e.forEach(x => { if (x.isIntersecting){ x.target.classList.add("on"); o.unobserve(x.target); } }), {threshold:.3}).observe($("#pipe"));
+
+/* metrics count up when visible (dash if left at 0) */
+document.querySelectorAll(".metric .n").forEach(n => {
+  new IntersectionObserver((es, o) => es.forEach(x => {
+    if (!x.isIntersecting) return; o.unobserve(n);
+    const v = parseFloat(n.dataset.value); if (!(v > 0)) return;
+    const t0 = performance.now();
+    (function f(t){ const k = Math.min((t - t0) / 1200, 1); n.textContent = (v * k).toFixed(2); if (k < 1) requestAnimationFrame(f); })(t0);
+  }), {threshold:.6}).observe(n);
+});
+
+/* upload */
+const drop = $("#drop"), input = $("#file");
+drop.addEventListener("click", () => input.click());
+drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); input.click(); } });
+["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => setFile(e.dataTransfer.files[0]));
+input.addEventListener("change", () => setFile(input.files[0]));
+$("#beams").addEventListener("input", e => $("#beamOut").textContent = e.target.value);
+
+function setFile(f){
+  if (!f) return;
+  if (!/^image\/(jpeg|png|webp)$/.test(f.type)) return say("That file type isn't supported. Choose a JPG, PNG, or WebP image.");
+  if (f.size > 10 * 1024 * 1024) return say("That image is larger than 10 MB. Choose a smaller one.");
+  file = f; if (url) URL.revokeObjectURL(url); url = URL.createObjectURL(f);
+  $("#preview").src = url; $("#prompt").classList.add("d-none"); $("#frame").classList.remove("d-none");
+  $("#go").disabled = false; $("#reset").disabled = false; clearCaps(); say("Image ready. Press Generate captions.");
+}
+function say(m){ $("#status").textContent = m; }
+function clearCaps(){ ["#capA","#capB"].forEach(s => { const el = $(s); el._id = (el._id||0)+1; el.className = "cap idle"; el.textContent = "The caption will appear here."; }); $("#banner").classList.add("d-none"); }
+$("#reset").addEventListener("click", () => {
+  file = null; input.value = ""; $("#preview").removeAttribute("src");
+  $("#frame").classList.add("d-none"); $("#prompt").classList.remove("d-none");
+  $("#go").disabled = true; $("#reset").disabled = true; clearCaps(); say("Choose an image to begin.");
+});
+
+/* generate */
+const samples = [["a dog running on a grassy field","a dog is running in the grass"],["a man riding a bike down a street","a man is riding a bicycle"],["a group of people standing on a beach","people are standing near the water"]];
+$("#go").addEventListener("click", async () => {
+  const go = $("#go"), frame = $("#frame"), stages = ["Preprocessing the image…","Extracting visual features…","Writing the captions word by word…"];
+  go.disabled = true; $("#reset").disabled = true; frame.classList.add("busy"); clearCaps();
+  ["#capA","#capB"].forEach(s => { $(s).className = "cap idle"; $(s).innerHTML = '<div class="sk"></div><div class="sk w-75"></div>'; });
+  let k = 0; say(stages[0]); const tick = setInterval(() => say(stages[++k % stages.length]), 900);
+  let out, demo = false;
+  try{
+    const fd = new FormData(); fd.append("image", file); fd.append("beams", $("#beams").value);
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 90000);
+    const r = await fetch(API_URL, { method:"POST", body:fd, signal:ctl.signal }); clearTimeout(to);
+    if (!r.ok) throw new Error("http");
+    out = await r.json();
+    if (!out.blip || !out.gru) throw new Error("shape");
+  }catch(err){
+    if (err.message === "http" || err.message === "shape"){
+      clearInterval(tick); frame.classList.remove("busy"); clearCaps(); go.disabled = false; $("#reset").disabled = false;
+      return say("The server replied with an error. Check the backend console for details.");
+    }
+    demo = true; await new Promise(r => setTimeout(r, 1800));
+    const s = samples[Math.floor(Math.random() * samples.length)]; out = { blip:s[0], gru:s[1] };
+  }
+  clearInterval(tick); frame.classList.remove("busy");
+  const b = $("#banner");
+  if (demo){ b.textContent = "Backend not connected, so these are sample captions, not real model output. Start your Flask server at " + API_URL + " to see real results."; b.classList.remove("d-none"); }
+  say(demo ? "Showing sample captions." : "Done. Compare the two captions.");
+  await Promise.all([type($("#capA"), out.blip), type($("#capB"), out.gru)]);
+  go.disabled = false; $("#reset").disabled = false;
+});
+
+/* copy buttons */
+document.querySelectorAll(".copy").forEach(btn => btn.addEventListener("click", async () => {
+  const el = $("#" + btn.dataset.t); if (el.classList.contains("idle")) return;
+  try{ await navigator.clipboard.writeText(el.textContent); btn.innerHTML = '<i class="bi bi-check2"></i>'; setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i>', 1200); }catch(e){}
+}));
+</script>
+</body>
+</html>

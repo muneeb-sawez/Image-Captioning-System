@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% block title %}Research & Technical Deep Dive{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <!-- Research Paper Style Header -->
+  <div class="mb-5 pb-4 border-bottom" style="border-color: var(--border-subtle) !important;">
+    <div class="d-flex align-items-center gap-2 mb-2 font-mono text-cyan" style="font-size: 0.8rem;">
+      <i class="bi bi-journal-text"></i>
+      <span>TECHNICAL SPECIFICATION & BENCHMARK REPORT</span>
+    </div>
+    <h1 class="display-5 fw-bold mb-3">Comparative Analysis: Multimodal Transformer vs. Convolutional Recurrent Captioning</h1>
+    <p class="lead text-secondary" style="max-width: 840px;">
+      An empirical study evaluating zero-shot multimodal vision-language pretraining against an end-to-end custom ResNet-50 + 2-layer GRU architecture trained under strict data-split constraints on Flickr8k.
+    </p>
+    <div class="d-flex flex-wrap gap-4 pt-3 font-mono text-tertiary" style="font-size: 0.82rem;">
+      <div><strong>Authors:</strong> DS Lab Research Group</div>
+      <div><strong>Dataset:</strong> Flickr8k (80/10/10 by-image split)</div>
+      <div><strong>Hardware:</strong> NVIDIA RTX 4050 (6GB VRAM)</div>
+      <div><strong>Framework:</strong> PyTorch &bull; CUDA</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: ARCHITECTURE DEEP DIVE -->
+  <section class="mb-5 pb-4" id="architecture">
+    <div class="section-header mb-4">
+      <span class="section-eyebrow">Section 01</span>
+      <h2 class="h2 fw-bold">Mathematical & Architectural Formulation</h2>
+      <p class="text-secondary">Understanding the end-to-end visual-to-linguistic transformation pipeline.</p>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-6">
+        <div class="p-4 rounded-4" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); height: 100%;">
+          <h4 class="h5 text-cyan mb-3"><i class="bi bi-camera me-2"></i>Visual Feature Bottleneck</h4>
+          <p class="text-secondary" style="font-size: 0.95rem;">
+            Given an input RGB image \( I \in \mathbb{R}^{3 \times 224 \times 224} \), we discard the final classification layer of a pre-trained ResNet-50 network and extract the global average pooled bottleneck vector:
+          </p>
+          <div class="p-3 my-3 rounded-3 font-mono text-cyan" style="background: rgba(0, 229, 255, 0.05); border: 1px solid var(--border-cyan); font-size: 0.9rem;">
+            f(I) = \text{ResNet50}_{\text{frozen}}(I) \in \mathbb{R}^{2048}
+          </div>
+          <p class="text-secondary mb-0" style="font-size: 0.9rem;">
+            Keeping the convolutional weights frozen ensures fast, reproducible training without gradient drift or memory exhaustion on local workstation GPUs.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="p-4 rounded-4" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); height: 100%;">
+          <h4 class="h5" style="color: var(--violet);"><i class="bi bi-cpu me-2"></i>Hidden State Initialization</h4>
+          <p class="text-secondary" style="font-size: 0.95rem;">
+            Rather than feeding the visual vector at every decoding step, our model injects the visual context exclusively into the initial hidden states of the stacked 2-layer GRU:
+          </p>
+          <div class="p-3 my-3 rounded-3 font-mono" style="background: rgba(124, 77, 255, 0.05); border: 1px solid var(--border-violet); color: #B388FF; font-size: 0.9rem;">
+            h_0^{(1..2)} = \tanh\left( W_{\text{init}} f(I) + b_{\text{init}} \right) \in \mathbb{R}^{2 \times B \times 512}
+          </div>
+          <p class="text-secondary mb-0" style="font-size: 0.9rem;">
+            This initializes the internal recurrent memory with the entire visual scene before token sequence generation begins.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRU Recurrent Equations & Softmax -->
+    <div class="p-4 rounded-4" style="background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+      <h4 class="h5 mb-3">Autoregressive Language Generation & Search Decoding</h4>
+      <div class="row g-4">
+        <div class="col-md-6">
+          <p class="text-secondary" style="font-size: 0.92rem;">
+            During training, <strong>teacher forcing</strong> feeds ground-truth tokens \( w_t \) through an embedding matrix \( E \in \mathbb{R}^{2656 \times 256} \). The GRU updates its recurrent memory via gating:
+          </p>
+          <ul class="text-secondary" style="font-size: 0.88rem;">
+            <li><strong>Update Gate:</strong> \( z_t = \sigma(W_z x_t + U_z h_{t-1} + b_z) \)</li>
+            <li><strong>Reset Gate:</strong> \( r_t = \sigma(W_r x_t + U_r h_{t-1} + b_r) \)</li>
+            <li><strong>Candidate State:</strong> \( \tilde{h}_t = \tanh(W_h x_t + U_h (r_t \odot h_{t-1}) + b_h) \)</li>
+            <li><strong>Hidden Update:</strong> \( h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t \)</li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <p class="text-secondary" style="font-size: 0.92rem;">
+            A dense linear projection computes unnormalized logits over vocabulary \( V \):
+          </p>
+          <div class="p-2 mb-3 rounded-2 font-mono text-light" style="background: rgba(255,255,255,0.03); font-size: 0.85rem;">
+            P(w_{t+1} \mid w_{\le t}) = \text{softmax}(W_{\text{vocab}} h_t^{(2)} + b_{\text{vocab}})
+          </div>
+          <p class="text-secondary" style="font-size: 0.88rem;">
+            At inference, <strong>Beam Search</strong> (width \( k = 3 \)) keeps the top candidate sequences with length normalization \( \frac{1}{|Y|^\alpha} \sum \log P(w_t) \), significantly outperforming greedy argmax decoding.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: MODEL SPECIFICATIONS MATRIX -->
+  <section class="mb-5 pb-4" id="models">
+    <div class="section-header mb-4">
+      <span class="section-eyebrow">Section 02</span>
+      <h2 class="h2 fw-bold">Comprehensive Model Specifications</h2>
+      <p class="text-secondary">Side-by-side architectural and training parameters comparison.</p>
+    </div>
+
+    <div class="metrics-table-wrapper">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th>Specification Feature</th>
+            <th>Salesforce BLIP (Base Baseline)</th>
+            <th>Our Custom CNN + GRU Model</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Visual Encoder</strong></td>
+            <td>Vision Transformer (ViT-B/16), 12 layers, 768-d hidden</td>
+            <td>ResNet-50 (Convolutional), 2048-d bottleneck, frozen</td>
+          </tr>
+          <tr>
+            <td><strong>Language Decoder</strong></td>
+            <td>Multimodal Transformer (Cross-Attention Decoders)</td>
+            <td>2-Layer Stacked Recurrent GRU (512 hidden units per layer)</td>
+          </tr>
+          <tr>
+            <td><strong>Word Embedding Space</strong></td>
+            <td>WordPiece BPE (30,522 vocabulary items, 768-d)</td>
+            <td>Learned dense embedding matrix (2,656 tokens, 256-d)</td>
+          </tr>
+          <tr>
+            <td><strong>Training Objective</strong></td>
+            <td>Language Modeling + Image-Text Matching + Contrastive</td>
+            <td>Categorical Cross-Entropy Loss (padding token index 0 ignored)</td>
+          </tr>
+          <tr>
+            <td><strong>Supervision Strategy</strong></td>
+            <td>CapFilt Synthetic Web Bootstrapping + COCO Fine-tuning</td>
+            <td>Teacher Forcing with Adam Optimizer (learning rate = 3e-4)</td>
+          </tr>
+          <tr>
+            <td><strong>Regularization</strong></td>
+            <td>Weight decay, AdamW, layer normalization</td>
+            <td>Dropout 0.5 on embeddings and layers, Gradient Clip = 5.0</td>
+          </tr>
+          <tr>
+            <td><strong>Training Dataset</strong></td>
+            <td>~14 Million image-text pairs + 120,000 COCO images</td>
+            <td>Flickr8k (6,473 training images, 32,365 sentence pairs)</td>
+          </tr>
+          <tr>
+            <td><strong>GPU Hardware Footprint</strong></td>
+            <td>~990 MB weights in VRAM</td>
+            <td>~27.6 MB checkpoint in VRAM</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SECTION 3: TRAINING SETUP & LIVE LOSS CURVE -->
+  <section class="mb-5 pb-4" id="training">
+    <div class="section-header mb-4">
+      <span class="section-eyebrow">Section 03</span>
+      <h2 class="h2 fw-bold">Training Dynamics & Loss Curves</h2>
+      <p class="text-secondary">Recorded epoch-by-epoch loss progression from the local NVIDIA RTX 4050 training run.</p>
+    </div>
+
+    <div class="row g-4">
+      <!-- Training Loss Table -->
+      <div class="col-lg-6">
+        <div class="metrics-table-wrapper" style="max-height: 480px; overflow-y: auto;">
+          <table class="table-custom">
+            <thead>
+              <tr>
+                <th>Epoch</th>
+                <th>Training Loss</th>
+                <th>Validation Loss</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in train_log %}
+              <tr>
+                <td class="font-mono">Epoch {{ row.epoch }}</td>
+                <td class="font-mono text-secondary">{{ row.train_loss }}</td>
+                <td class="font-mono text-cyan fw-bold">{{ row.val_loss }}</td>
+                <td>
+                  {% if row.epoch == '14' %}
+                  <span class="badge bg-success" style="font-size: 0.72rem;">Best Checkpoint (2.7115)</span>
+                  {% elif row.epoch in ['15', '16', '17'] %}
+                  <span class="text-warning" style="font-size: 0.72rem;">Early Stop Window</span>
+                  {% else %}
+                  <span class="text-tertiary" style="font-size: 0.72rem;">Improved</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CSS Visual Bar Chart of Loss Progression -->
+      <div class="col-lg-6">
+        <div class="p-4 rounded-4" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); height: 100%;">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="h6 mb-0">Validation Loss Descent by Epoch</h4>
+            <span class="font-mono text-cyan" style="font-size: 0.75rem;">Early Stop: Epoch 14</span>
+          </div>
+
+          <div class="d-flex align-items-end justify-content-between gap-1 pt-4 pb-2" style="height: 280px; border-bottom: 1px solid var(--border-medium);">
+            {% for row in train_log %}
+            <div class="d-flex flex-column align-items-center flex-grow-1" style="height: 100%; justify-content: flex-end;" title="Epoch {{ row.epoch }}: Val Loss {{ row.val_loss }}">
+              <div style="width: 100%; max-width: 16px; height: {{ row.val_pct }}%; background: {% if row.epoch == '14' %}var(--cyan){% elif row.epoch in ['15', '16', '17'] %}rgba(255, 179, 0, 0.4){% else %}rgba(124, 77, 255, 0.5){% endif %}; border-radius: 4px 4px 0 0; transition: height 0.3s ease;"></div>
+              <span class="font-mono text-tertiary mt-2" style="font-size: 0.65rem;">{{ row.epoch }}</span>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="d-flex justify-content-between text-tertiary font-mono pt-3" style="font-size: 0.75rem;">
+            <span>Initial: 3.5215 (Epoch 1)</span>
+            <span class="text-cyan">Min Val Loss: 2.7115 (Epoch 14)</span>
+            <span>Early Stop: Epoch 17</span>
+          </div>
+
+          <div class="mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.02); font-size: 0.82rem; color: var(--text-secondary);">
+            <strong>Early Stopping Criterion:</strong> Patience was set to 3 epochs. Validation loss plateaued at Epoch 14 (\( \text{Loss} = 2.7115 \)), avoiding overfitting on the relatively small Flickr8k vocabulary.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4: QUANTITATIVE BENCHMARK & EVALUATION -->
+  <section class="mb-5 pb-4" id="evaluation">
+    <div class="section-header mb-4">
+      <span class="section-eyebrow">Section 04</span>
+      <h2 class="h2 fw-bold">Quantitative Evaluation on Test Split</h2>
+      <p class="text-secondary">Corpus-level BLEU n-gram precision evaluated across 809 test images against all 5 reference sentences.</p>
+    </div>
+
+    <div class="metrics-table-wrapper mb-4">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th>Model Configuration</th>
+            <th>BLEU-1 (Unigram)</th>
+            <th>BLEU-2 (Bigram)</th>
+            <th>BLEU-3 (Trigram)</th>
+            <th>BLEU-4 (4-gram)</th>
+            <th>BLIP Agreement (BLEU-1)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong>Custom GRU (Greedy)</strong>
+              <div class="text-tertiary" style="font-size: 0.78rem;">argmax per token</div>
+            </td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_greedy.bleu1 }}</span></td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_greedy.bleu2 }}</span></td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_greedy.bleu3 }}</span></td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_greedy.bleu4 }}</span></td>
+            <td><span class="score-badge">{{ metrics.gru_greedy.agreement }}</span></td>
+          </tr>
+          <tr>
+            <td>
+              <strong>Custom GRU (Beam Width = 3)</strong>
+              <div class="text-tertiary" style="font-size: 0.78rem;">length-normalized candidate search</div>
+            </td>
+            <td><span class="score-badge score-violet fw-bold">{{ metrics.gru_beam.bleu1 }}</span></td>
+            <td><span class="score-badge score-violet fw-bold">{{ metrics.gru_beam.bleu2 }}</span></td>
+            <td><span class="score-badge score-violet fw-bold">{{ metrics.gru_beam.bleu3 }}</span></td>
+            <td><span class="score-badge score-violet fw-bold">{{ metrics.gru_beam.bleu4 }}</span></td>
+            <td><span class="score-badge fw-bold">{{ metrics.gru_beam.agreement }}</span></td>
+          </tr>
+          <tr>
+            <td>
+              <strong>Salesforce BLIP (Base)</strong>
+              <div class="text-tertiary" style="font-size: 0.78rem;">Pretrained baseline reference</div>
+            </td>
+            <td><span class="score-badge score-cyan">{{ metrics.blip.bleu1 }}</span></td>
+            <td><span class="score-badge score-cyan">{{ metrics.blip.bleu2 }}</span></td>
+            <td><span class="score-badge score-cyan">{{ metrics.blip.bleu3 }}</span></td>
+            <td><span class="score-badge score-cyan">{{ metrics.blip.bleu4 }}</span></td>
+            <td><span class="score-badge text-tertiary">1.0000 (Self)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Key Scientific Takeaways -->
+    <div class="row g-3 mb-5">
+      <div class="col-md-4">
+        <div class="p-3 rounded-3" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); height: 100%;">
+          <div class="font-mono text-cyan mb-1" style="font-size: 0.75rem;">TAKEAWAY 1</div>
+          <h5 class="h6 mb-2">Beam Search Efficacy</h5>
+          <p class="text-secondary mb-0" style="font-size: 0.85rem;">
+            Beam search increased BLEU-4 from 0.1861 to 0.2004 (+7.7% relative gain), successfully mitigating greedy myopic traps by retaining top multi-token candidates.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="p-3 rounded-3" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); height: 100%;">
+          <div class="font-mono text-cyan mb-1" style="font-size: 0.75rem;">TAKEAWAY 2</div>
+          <h5 class="h6 mb-2">High Unigram Alignment</h5>
+          <p class="text-secondary mb-0" style="font-size: 0.85rem;">
+            Our small model achieved a BLEU-1 score of 0.6041, indicating that over 60% of generated unigrams directly matched human annotations despite seeing only 6,473 images.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="p-3 rounded-3" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); height: 100%;">
+          <div class="font-mono text-cyan mb-1" style="font-size: 0.75rem;">TAKEAWAY 3</div>
+          <h5 class="h6 mb-2">BLIP as Pseudo-Reference</h5>
+          <p class="text-secondary mb-0" style="font-size: 0.85rem;">
+            Agreement of 0.3344 between the custom GRU and BLIP demonstrates significant overlap in high-level object detection, with divergences occurring primarily in fine descriptive adjectives.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUALITATIVE SAMPLES BROWSER -->
+    <h3 class="h4 fw-bold mb-3">Qualitative Test Samples Browser (First {{ comparisons|length }} Images)</h3>
+    <div class="metrics-table-wrapper" style="max-height: 520px; overflow-y: auto;">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 18%;">Image ID</th>
+            <th style="width: 28%;">Human Ground Truth</th>
+            <th style="width: 27%;">BLIP Baseline</th>
+            <th style="width: 27%;">Our Custom GRU</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in comparisons %}
+          <tr>
+            <td class="font-mono text-tertiary" style="font-size: 0.75rem;">{{ row.image }}</td>
+            <td style="font-size: 0.88rem; color: var(--text-secondary);">"{{ row.human }}"</td>
+            <td style="font-size: 0.88rem; color: var(--cyan);">"{{ row.blip }}"</td>
+            <td style="font-size: 0.88rem; color: #B388FF;">"{{ row.gru }}"</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SECTION 5: FAILURE MODES & ACADEMIC LIMITATIONS -->
+  <section class="mb-5 pb-4" id="limitations">
+    <div class="section-header mb-4">
+      <span class="section-eyebrow" style="color: var(--amber);">Section 05</span>
+      <h2 class="h2 fw-bold">Taxonomy of Model Failure Modes</h2>
+      <p class="text-secondary">Detailed qualitative categorization of common failure vectors observed during test evaluations.</p>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="p-4 rounded-4" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); height: 100%;">
+          <div class="d-flex align-items-center gap-2 mb-2 text-warning font-mono" style="font-size: 0.8rem;">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>CASE TYPE: CONCEPT SUBSTITUTION</span>
+          </div>
+          <h4 class="h5 mb-2">Out-of-Vocabulary Semantic Mapping</h4>
+          <p class="text-secondary" style="font-size: 0.9rem;">
+            When presented with objects outside the Flickr8k 2,656-word dictionary (e.g., snowmobiles or skateboards), the recurrent decoder activates the nearest dense visual cluster. 
+            In sample <code>109738916_236dc456ac.jpg</code>, where people rode snowmobiles, our model outputted:
+          </p>
+          <div class="p-2 rounded-2 font-mono" style="background: rgba(255,255,255,0.03); font-size: 0.82rem; color: #B388FF;">
+            "a man in a red jacket is riding a bike in the snow"
+          </div>
+          <p class="text-secondary mt-2 mb-0" style="font-size: 0.85rem;">
+            The model correctly identified the environment (<em>snow</em>) and action (<em>riding</em>), but substituted <em>"snowmobile"</em> with <em>"bike"</em>.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="p-4 rounded-4" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); height: 100%;">
+          <div class="d-flex align-items-center gap-2 mb-2 text-warning font-mono" style="font-size: 0.8rem;">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>CASE TYPE: REPETITION LOOP</span>
+          </div>
+          <h4 class="h5 mb-2">Autoregressive Language Loops</h4>
+          <p class="text-secondary" style="font-size: 0.9rem;">
+            Even powerful foundation models like BLIP suffer from degeneration when beam scores collapse on ambiguous textures. In our test photo <code>4_food_berries.jpg</code>, BLIP generated:
+          </p>
+          <div class="p-2 rounded-2 font-mono" style="background: rgba(255,255,255,0.03); font-size: 0.82rem; color: var(--cyan);">
+            "fresh straw straw straw straw straw straw straw straw straw straw..."
+          </div>
+          <p class="text-secondary mt-2 mb-0" style="font-size: 0.85rem;">
+            This demonstrates that without explicit repetition penalties, language decoders can become trapped in cyclic n-gram loops.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

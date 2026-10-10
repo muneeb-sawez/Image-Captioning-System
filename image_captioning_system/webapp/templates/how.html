@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}How it works{% endblock %}
+{% block content %}
+<section id="how">
+  <div class="container">
+    <h2 class="mb-2">From pixels to words in five steps</h2>
+    <p class="muted mb-4">The same pipeline runs for both models.</p>
+    <div class="pipe" id="pipe">
+      <div class="step" style="--i:0"><b>1</b><br><i class="bi bi-image"></i><h3 class="h6 mt-2">Input image</h3><p>You upload a JPG, PNG, or WebP file.</p></div>
+      <div class="step" style="--i:1"><b>2</b><br><i class="bi bi-sliders"></i><h3 class="h6 mt-2">Preprocessing</h3><p>Pillow converts to RGB, then the image is resized and normalized.</p></div>
+      <div class="step" style="--i:2"><b>3</b><br><i class="bi bi-eye"></i><h3 class="h6 mt-2">Vision model</h3><p>BLIP's vision transformer or ResNet-50 turns the image into features.</p></div>
+      <div class="step" style="--i:3"><b>4</b><br><i class="bi bi-chat-text"></i><h3 class="h6 mt-2">Language generation</h3><p>The decoder writes the caption one word at a time with beam search.</p></div>
+      <div class="step" style="--i:4"><b>5</b><br><i class="bi bi-check2-circle"></i><h3 class="h6 mt-2">Caption</h3><p>Both captions appear side by side so you can compare them.</p></div>
+    </div>
+  </div>
+</section>
+<section id="architecture">
+  <div class="container">
+    <h2 class="mb-2">Two models, one evaluation</h2>
+    <p class="muted mb-4">Track A is used as is. Track B is trained by us, and its decoder is the part we built.</p>
+    <div class="lane a"><h3>Track A: pre-trained</h3><div class="flow"><span>Image</span><i class="bi bi-chevron-right"></i><span>BLIP vision transformer</span><i class="bi bi-chevron-right"></i><span>BLIP text decoder</span><i class="bi bi-chevron-right"></i><span class="out">Caption</span></div></div>
+    <div class="lane b"><h3>Track B: trained from scratch</h3><div class="flow"><span>Image</span><i class="bi bi-chevron-right"></i><span>ResNet-50 (frozen)</span><i class="bi bi-chevron-right"></i><span class="new">2-layer GRU (trained by us)</span><i class="bi bi-chevron-right"></i><span class="out">Caption</span></div></div>
+    <div class="lane c"><h3>Evaluation</h3><div class="flow"><span>BLEU-1 to 4 against human captions</span><span>Agreement with BLIP</span><span>Manual rating, 1 to 5</span><span>CLIPScore (optional)</span></div></div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pipe.js') }}"></script>{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Results{% endblock %}
+{% block content %}
+{% macro f(v) %}{{ '%.3f' % v if v is number else '–' }}{% endmacro %}
+{% set g = metrics.get('gru_greedy', {}) %}{% set b = metrics.get('blip', {}) %}
+<section><div class="container">
+<h2 class="mb-2">Results</h2>
+<p class="muted mb-4">{% if metrics %}Scores come from <code>results/metrics.json</code>.{% else %}No results yet. Add <code>results/metrics.json</code> after running the evaluation (see README).{% endif %}</p>
+<div class="row g-4">
+{% for label, v in [('GRU BLEU-1', g.get('bleu1')), ('GRU BLEU-4', g.get('bleu4')), ('BLIP BLEU-4', b.get('bleu4')), ('GRU agreement with BLIP', g.get('agreement'))] %}
+<div class="col-6 col-lg-3"><div class="card-x metric"><div class="n" data-value="{{ v if v is number else 0 }}">–</div><div class="muted">{{ label }}</div></div></div>
+{% endfor %}
+</div>
+<div class="row g-4 mt-1">
+  <div class="col-lg-7"><div class="card-x"><h3 class="h5 mb-3">Comparison on the test set</h3>
+    <div class="table-responsive"><table class="table tbl align-middle"><thead><tr><th>Model</th><th>BLEU-1</th><th>BLEU-4</th><th>Agreement</th><th>Manual</th></tr></thead><tbody>
+    {% for key, name in [('gru_greedy','GRU, greedy'),('gru_beam','GRU, beam search'),('blip','BLIP base')] %}{% set m = metrics.get(key, {}) %}
+    <tr><td>{{ name }}</td><td>{{ f(m.get('bleu1')) }}</td><td>{{ f(m.get('bleu4')) }}</td><td>{{ f(m.get('agreement')) }}</td><td>{{ f(m.get('manual')) }}</td></tr>{% endfor %}
+    </tbody></table></div></div></div>
+  <div class="col-lg-5"><div class="card-x h-100"><h3 class="h5 mb-3">Limitations</h3>
+    <ul class="lim ps-3 mb-0"><li>BLIP saw far more training data, so it is a strong reference rather than a fair contest.</li><li>Our GRU is trained on 8,000 images and may give generic captions.</li><li>BLEU can penalize correct captions that use different words, so captions are also rated by hand.</li></ul></div></div>
+</div>
+<div class="card-x mt-4"><h3 class="h5 mb-3">Sample captions</h3>
+{% if rows %}
+<div class="table-responsive"><table class="table tbl align-middle"><thead><tr><th>Image</th><th>Human</th><th>BLIP</th><th>GRU</th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{{ r.get('image') }}</td><td>{{ r.get('human') }}</td><td>{{ r.get('blip') }}</td><td>{{ r.get('gru') }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}<p class="muted mb-0">No samples yet. Save <code>results/comparison.csv</code> with the columns <code>image,human,blip,gru</code>.</p>{% endif %}
+</div></div></section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/metrics.js') }}"></script>{% endblock %}

@@ -1,0 +1,599 @@
+=== IMAGE CAPTIONING PROJECT PLAN ===
+Image Caption Generation
+Final Project Planning Document
+A free, locally running image-captioning system: a pre-trained BLIP application plus a custom CNN + 2-layer GRU model trained from scratch, with BLIP used as an additional validation mechanism. Built with the Google Antigravity IDE.
+1. Project Overview
+1.1 Problem statement
+The project converts visual information into human-readable language. Given an image, the system must understand its contents and express that understanding as a grammatically meaningful sentence. For example, an image of a dog running in a park should produce: "A dog is running in a grassy park."
+1.2 What the user will be able to do
+Upload an image.
+Let the AI analyze the image.
+Receive an automatically generated caption.
+View the caption in a simple interface (Gradio).
+1.3 Approach in brief
+Instead of relying on one model, the project uses two tracks and compares them:
+Track
+Model
+Role
+Training
+A
+Pre-trained BLIP (Salesforce/blip-image-captioning-base)
+Working captioner and strong reference baseline
+None (pre-trained)
+B
+Frozen ResNet-50 encoder + 2-layer GRU decoder
+Our own model, trained from scratch on Flickr8k
+Decoder trained by us
+Validation
+Track B vs human captions, and Track B vs Track A
+Measures how close a small custom model gets to a large pre-trained one
+Evaluation only
+Pipeline: Input Image → Image Processing → Vision Model → Language Generation → Caption.
+One-sentence summary: a free, locally running application that takes an image, understands its visual content with a vision-language model, and generates a natural-language caption, together with a self-trained CNN + GRU model that is evaluated against a pre-trained reference.
+2. Technologies
+Component
+Purpose
+Python 3.9+
+Main programming language
+PyTorch
+Deep learning framework (both tracks)
+Hugging Face Transformers
+BLIP model and processor
+BLIP (base model, about 1 GB)
+Pre-trained captioner; downloaded once, then works offline
+torchvision ResNet-50
+Frozen CNN feature extractor for Track B
+Pillow
+Image loading and preprocessing
+Gradio
+Simple web interface
+NLTK
+BLEU score computation
+CLIP (optional)
+Reference-free CLIPScore (openai/clip-vit-base-patch32)
+Flickr8k dataset
+8,000 images with 5 human captions each, used to train and test Track B
+Google Antigravity IDE
+Agent-first development environment used to build the project
+Note: the captioning application runs fully locally and free. The Antigravity agent itself uses Google's cloud models during development, so the IDE is not offline. Mention this distinction in the report.
+3. Development Environment: Google Antigravity
+Antigravity is Google's agent-first IDE, built on a VS Code foundation. It is in free preview for personal Gmail accounts. You describe the work, the agent writes a plan, and you review and approve before it writes and runs code. Menu names can differ slightly between versions.
+3.1 Setup steps
+Download the installer from antigravity.google/download. A personal Google account and Chrome are required.
+Run the setup wizard. Choose the middle autonomy level (Agent-assisted or Review-driven). The agent decides when to check in, and you stay in control of what is run.
+Install Python 3.9 or newer separately if it is not already installed.
+Create an empty folder (for example image-captioning) and open it with Open Folder.
+Learn the two views: Agent Manager (give tasks to agents) and Editor (read and edit code). Toggle with Ctrl+E (Cmd+E on macOS).
+3.2 Working method
+Put the project rules in an AGENTS.md file at the workspace root. Every agent reads it before starting work.
+Use Planning mode so the agent writes an implementation plan first. Read the plan and artifacts (task list, diffs, walkthrough) before approving.
+Approve terminal commands such as creating the virtual environment and pip install.
+Work in phases (Section 6) rather than one giant prompt. Ask for one change at a time.
+Agent quotas on the free tier can run out. The project does not depend on the agent, so you can always edit and run code yourself in the Editor.
+Understand every file before your viva. Ask the agent to explain any function line by line.
+3.3 Suggested AGENTS.md contents
+Project: image captioning mini-project (Python, PyTorch).
+Rules:
+- No paid APIs or cloud inference in the application.
+- Track A: pre-trained BLIP (Salesforce/blip-image-captioning-base).
+- Track B: frozen ResNet-50 features -> 2-layer GRU decoder trained from scratch
+  on Flickr8k (embed 256, hidden 512, dropout 0.5).
+- BLIP is used for evaluation and comparison of Track B.
+- Use CPU if no GPU is available. Comment every file clearly.
+- Show an implementation plan before writing code.
+4. Project Structure
+image-captioning/
+├── AGENTS.md              project rules for the agents
+├── requirements.txt       Python dependencies
+├── blip_caption.py        Track A: BLIP caption function
+├── vocab.py               Track B: tokenizer and vocabulary
+├── extract_features.py    Track B: ResNet-50 features for all images
+├── model.py               Track B: GRU decoder
+├── train.py               Track B: training loop
+├── evaluate.py            BLEU on the test split
+├── compare.py             Track B vs BLIP vs human references
+├── app.py                 Gradio interface
+├── data/                  Flickr8k images and captions
+├── test_images/           extra images for manual testing
+└── README.md              setup and run instructions
+5. Implementation Plan
+5.1 Track A: BLIP application
+Create a virtual environment and install dependencies.
+Write blip_caption.py that loads the BLIP model once and exposes generate_caption(image, num_beams=5).
+Write app.py with a Gradio interface: an image upload, a beam-size slider, and a caption textbox.
+Run python app.py, open the local URL (usually http://127.0.0.1:7860), and test with several images. The first run downloads the model (about 1 GB), so internet is needed once.
+The code maps directly to the pipeline: convert("RGB") and the processor handle image preprocessing, BLIP's vision transformer is the vision model, model.generate(...) with beam search is language generation, and decode produces the caption. Full code is in Appendix A.
+5.2 Track B: CNN + 2-layer GRU trained from scratch
+Architecture
+Image -> ResNet-50 (frozen, pre-trained) -> 2048-d feature
+      -> Linear + tanh -> initial hidden state of a 2-layer GRU
+      -> GRU generates words: <start> a dog is running <end>
+Encoder: pre-trained ResNet-50 with the classifier removed, used only as a feature extractor and not trained. This keeps the project feasible on a student machine.
+Decoder (trained by us): word embedding → 2-layer GRU → linear layer over the vocabulary.
+Training: teacher forcing with cross-entropy loss. At each step the GRU sees the correct previous word and learns to predict the next one.
+Dataset: Flickr8k, split roughly 80/10/10 into train, validation, and test. COCO is better but too large for a mini-project.
+Steps
+Build the vocabulary: lowercase, strip punctuation, keep words with frequency of at least 5, special tokens <pad>=0, <start>, <end>, <unk>.
+Extract and save 2048-d ResNet-50 features for every image to a single file. This is the slow step; free Google Colab is a fallback if there is no GPU.
+Implement the GRU decoder (model.py) and training loop (train.py).
+Train for about 20 epochs, evaluating validation loss each epoch and saving the best checkpoint. Stop when validation loss stops improving, since GRUs overfit quickly on small data.
+Implement greedy decoding, then optionally beam search (width 3 to 5).
+Hyperparameters
+Parameter
+Value
+Embedding size / hidden size
+256 / 512
+GRU layers / dropout
+2 / 0.5
+Optimizer / learning rate
+Adam / 3e-4
+Gradient clipping / batch size
+5 / 64
+Epochs / max caption length
+about 20 / 20 tokens
+Loss
+Cross-entropy, ignoring padding
+6. Agent Prompts by Phase
+Give these to the agent in Agent Manager, in Planning mode, one phase at a time. In Manager view, independent phases can run in parallel (for example data pipeline and evaluation scripts).
+Phase
+Prompt (summary)
+1. Track A
+Build a BLIP captioning app: venv, requirements.txt, blip_caption.py with generate_caption(image, num_beams=5), and a Gradio app.py. Use CPU if no GPU. No external APIs.
+2. Data
+Read AGENTS.md. Write vocab.py and extract_features.py (frozen ResNet-50, 2048-d features saved to one .pt file) and the 80/10/10 split. Show the plan first.
+3. Model
+Write model.py and train.py: 2-layer GRU, embed 256, hidden 512, dropout 0.5, Adam 3e-4, clip 5, batch 64, teacher forcing, best-checkpoint saving, train.log. Run training in the background.
+4. Evaluation
+Write evaluate.py (greedy and beam decoding, corpus BLEU-1 to 4 against all 5 references) and compare.py (GRU vs BLIP vs human references, saving a CSV).
+5. Interface
+Update app.py so one uploaded image shows the caption from our GRU model and from BLIP side by side.
+6. Documentation
+Write README.md with setup steps, then summarize evaluation results and failure cases in a short report.
+7. Evaluation and Validation Plan
+BLIP serves as the second validation mechanism for the custom model. All models are run on the same held-out test images.
+7.1 Three checks
+Reference-based: BLEU-1 to BLEU-4 of the GRU against the 5 human captions, and BLEU of BLIP against the same captions.
+Agreement with BLIP: treat BLIP's caption as a pseudo-reference and score the GRU against it.
+Reference-free (optional): CLIPScore for each caption, measuring image-text match without human captions.
+7.2 Manual evaluation
+Collect 20 to 30 varied extra images in test_images/: animals, people, street scenes, food, indoor scenes, and a few hard cases such as crowds or abstract images.
+Rate each caption from 1 to 5 for accuracy and fluency. BLEU penalizes valid captions that use different words, so human rating gives a fairer picture.
+compare.py saves a CSV with image, GRU caption, BLIP caption, and human captions. Sort by lowest GRU-vs-BLIP agreement and read the worst 20 by hand.
+7.3 Optional experiments
+Greedy decoding vs beam search (width 3 to 5).
+1-layer vs 2-layer GRU (ablation that justifies the 2-layer choice).
+BLIP base vs blip-image-captioning-large.
+Attention over the CNN spatial feature map (larger step, natural upgrade).
+Fine-tuning the last ResNet block after the GRU has converged.
+7.4 Results table (to fill in)
+Model
+BLEU-1
+BLEU-4
+Agreement with BLIP
+Manual score (1-5)
+GRU (greedy)
+GRU (beam)
+BLIP base
+(reference)
+8. Interpreting the Results
+BLIP will almost certainly win. It was pre-trained on millions of image-text pairs while the GRU saw about 6,000 images. This is expected, and the comparison shows how far a small model trained from scratch can get.
+BLIP is a proxy, not ground truth. High agreement means two models say similar things, not that either is correct. It can share errors and can write valid captions that differ from ours. This is why human references and manual rating are also used.
+Typical GRU failure modes: generic captions ("a man is standing in the street"), repeated words, wrong objects, and wrong counts.
+BLEU on small custom sets looks low. Say so in the report and report the numbers honestly. A clear error analysis is a strong result even if scores are lower than BLIP.
+9. Suggested Timeline
+A suggested five-week plan. Adjust it to your actual deadline.
+Week
+Focus
+Output
+1
+Install Antigravity, write AGENTS.md, build Track A
+Working BLIP Gradio demo
+2
+Download Flickr8k, vocabulary, feature extraction
+Saved features, split files
+3
+GRU model and training
+Best checkpoint, training log
+4
+Evaluation, comparison with BLIP, manual ratings
+Results CSV and tables, error analysis
+5
+Combined app, README, report, viva preparation
+Final demo and report
+10. Risks and Tips
+Risk
+Mitigation
+Feature extraction is slow on CPU
+Run it once and save features; use free Google Colab if needed
+GRU overfits on Flickr8k
+Dropout 0.5, early stopping on validation loss, keep the best checkpoint
+Agent quota runs out
+Continue in the Editor manually; the project does not depend on the agent
+Agent writes code you do not understand
+Review the plan first; ask for line-by-line explanations
+Large torch install is slow
+The CPU build is fine; captioning one image takes a few seconds
+Low BLEU scores
+Add manual ratings and CLIPScore; explain why BLEU underrates valid captions
+11. Deliverables Checklist
+Working Gradio app showing BLIP and GRU captions side by side
+Trained GRU checkpoint and training log
+Evaluation scripts and results CSV
+Results tables, error analysis, and screenshots of good and bad examples
+README with setup and run instructions
+Final report and viva preparation (BLIP architecture, beam search, why a pre-trained model was used, GRU design)
+Appendix A: Reference Code
+Use this to verify what the agent produces. It is not required to type it manually.
+A.1 blip_caption.py (Track A)
+import torch
+from PIL import Image
+from transformers import BlipProcessor, BlipForConditionalGeneration
+ 
+MODEL_ID = "Salesforce/blip-image-captioning-base"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+ 
+processor = BlipProcessor.from_pretrained(MODEL_ID)
+model = BlipForConditionalGeneration.from_pretrained(MODEL_ID).to(device).eval()
+ 
+def generate_caption(image: Image.Image, num_beams: int = 5,
+                     max_new_tokens: int = 40) -> str:
+    image = image.convert("RGB")                       # preprocessing
+    inputs = processor(images=image, return_tensors="pt").to(device)
+    with torch.no_grad():
+        out = model.generate(**inputs, num_beams=num_beams,
+                             max_new_tokens=max_new_tokens)
+    return processor.decode(out[0], skip_special_tokens=True).strip()
+A.2 app.py (BLIP-only version)
+import gradio as gr
+from blip_caption import generate_caption
+ 
+def run(image, beams):
+    if image is None:
+        return "Please upload an image."
+    return generate_caption(image, num_beams=int(beams))
+ 
+demo = gr.Interface(
+    fn=run,
+    inputs=[gr.Image(type="pil", label="Upload an image"),
+            gr.Slider(1, 10, value=5, step=1, label="Beam size")],
+    outputs=gr.Textbox(label="Generated caption"),
+    title="Image Caption Generator (BLIP)",
+    description="Upload an image and the AI will describe it.",
+)
+ 
+if __name__ == "__main__":
+    demo.launch()
+A.3 model.py (Track B)
+import torch, torch.nn as nn
+ 
+class CaptionGRU(nn.Module):
+    def __init__(self, vocab_size, feat_dim=2048, embed_dim=256,
+                 hidden_dim=512, num_layers=2, dropout=0.5):
+        super().__init__()
+        self.num_layers, self.hidden_dim = num_layers, hidden_dim
+        self.init_h = nn.Linear(feat_dim, hidden_dim * num_layers)
+        self.embed = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.gru = nn.GRU(embed_dim, hidden_dim, num_layers=num_layers,
+                          batch_first=True, dropout=dropout)
+        self.drop = nn.Dropout(dropout)
+        self.fc = nn.Linear(hidden_dim, vocab_size)
+ 
+    def init_hidden(self, feats):
+        h = torch.tanh(self.init_h(feats))             # (B, L*H)
+        return h.view(-1, self.num_layers,
+                      self.hidden_dim).transpose(0, 1).contiguous()
+ 
+    def forward(self, feats, caps):
+        # caps: (B, T) = [<start>, w1, ..., <end>, <pad>...]
+        out, _ = self.gru(self.drop(self.embed(caps[:, :-1])),
+                          self.init_hidden(feats))
+        return self.fc(self.drop(out))                 # predicts caps[:, 1:]
+ 
+    @torch.no_grad()
+    def generate(self, feats, start_idx, end_idx, max_len=20):  # greedy
+        h = self.init_hidden(feats)
+        tok = torch.full((feats.size(0), 1), start_idx, device=feats.device)
+        ids = []
+        for _ in range(max_len):
+            out, h = self.gru(self.embed(tok), h)
+            tok = self.fc(out[:, -1]).argmax(-1, keepdim=True)
+            ids.append(tok)
+            if (tok == end_idx).all():
+                break
+        return torch.cat(ids, dim=1)
+A.4 Training step (train.py)
+criterion = nn.CrossEntropyLoss(ignore_index=0)       # ignore padding
+logits = model(feats, caps)                           # (B, T-1, V)
+loss = criterion(logits.reshape(-1, logits.size(-1)),
+                 caps[:, 1:].reshape(-1))
+loss.backward()
+nn.utils.clip_grad_norm_(model.parameters(), 5)
+optimizer.step()
+A.5 BLEU evaluation (evaluate.py / compare.py)
+from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
+sm = SmoothingFunction().method1
+ 
+def bleu(refs, hyps):   # refs: [[tokens, ...], ...], hyps: [tokens, ...]
+    return {f"BLEU-{n}": corpus_bleu(refs, hyps, weights=[1/n] * n,
+                                     smoothing_function=sm)
+            for n in range(1, 5)}
+ 
+gru_vs_human  = bleu(human_refs, gru_hyps)
+blip_vs_human = bleu(human_refs, blip_hyps)
+gru_vs_blip   = bleu([[b] for b in blip_hyps], gru_hyps)
+
+=== PART A PRETRAINED MODEL ===
+Part A
+Image Captioning Using a Pre-trained Model (BLIP)
+Project: Image Caption Generation   |   Prepared by: [Student name(s)]   |   Guide: [Teacher name]
+1. Aim and Objectives
+Aim: to build a working image captioning application by using an existing pre-trained model, without training any model ourselves.
+Understand what a pre-trained model is and why it is useful.
+Use the BLIP vision-language model to generate a caption for any image.
+Build a simple interface where a user uploads an image and reads the caption.
+Test the model on varied images and judge how accurate and fluent the captions are.
+Create the baseline that Part B (our own CNN + GRU model) will be compared against.
+2. Introduction
+2.1 What is a pre-trained model?
+A pre-trained model is a neural network that someone else has already trained on a very large dataset. Instead of teaching a model from nothing, which needs huge data, powerful hardware, and days of training, we download the finished model and use it directly. Reusing knowledge learned on one task for another is called transfer learning.
+2.2 Why use one for this project?
+No training needed: the model already recognizes common objects, scenes, and actions.
+Runs on a normal laptop: generating a caption takes only a few seconds, even on a CPU.
+Good quality: it was trained on far more image-text data than a student project could collect.
+Free: the model and the libraries are open source, so no paid API is needed.
+3. About the BLIP Model
+BLIP stands for Bootstrapping Language-Image Pre-training. It was introduced by Salesforce Research (Li et al., 2022) as a model that connects pictures and text. It can describe images and also match images with text.
+3.1 How BLIP produces a caption
+Image encoder: a Vision Transformer splits the image into small patches and turns them into feature vectors that capture what the image contains.
+Text decoder: a transformer language model writes the caption one word at a time. At every step it looks back at the image features to decide which word comes next.
+Stopping: the decoder continues until it produces an end-of-sentence token or reaches the maximum length.
+3.2 How BLIP was trained
+During pre-training, BLIP learned to match images with text and to generate text from images. Web images often come with noisy, low-quality captions, so BLIP uses a method called CapFilt: a captioner writes new synthetic captions, and a filter removes captions that do not fit the image. This gives the model cleaner training data.
+3.3 The checkpoint used in this project
+Item
+Value
+Model name
+Salesforce/blip-image-captioning-base
+Source
+Hugging Face model hub (free download)
+Backbone
+Vision Transformer, base size
+Fine-tuned for
+Image captioning on the COCO dataset
+Download size
+About 1 GB, downloaded once and then cached for offline use
+4. System Design
+The system follows a simple pipeline from the uploaded image to the displayed caption.
+Upload image
+→
+Preprocess (resize, RGB)
+→
+BLIP image encoder
+→
+BLIP text decoder
+→
+Show caption
+Stage
+What happens
+Tool
+Upload
+The user selects an image in the interface
+Gradio (or the Flask website)
+Preprocess
+The image is converted to RGB, resized, and normalized
+Pillow, BLIP processor
+Understand
+The image encoder produces visual features
+BLIP, PyTorch
+Generate
+The decoder writes the caption word by word using beam search
+BLIP, Transformers
+Display
+The caption is shown beside the image
+Gradio (or the Flask website)
+5. Requirements
+Software
+Purpose
+Python 3.9 or newer
+Programming language
+PyTorch
+Runs the neural network
+Hugging Face Transformers
+Loads BLIP and its processor
+Pillow
+Opens and converts images
+Gradio
+Builds the upload-and-caption interface
+No GPU is required. A GPU only makes captioning faster.
+6. Implementation
+Step 1: Install the libraries
+pip install torch transformers pillow gradio
+Step 2: Load the pre-trained model
+import torch
+from PIL import Image
+from transformers import BlipProcessor, BlipForConditionalGeneration
+ 
+MODEL_ID = "Salesforce/blip-image-captioning-base"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+ 
+processor = BlipProcessor.from_pretrained(MODEL_ID)
+model = BlipForConditionalGeneration.from_pretrained(MODEL_ID).to(device).eval()
+The first run downloads the model from Hugging Face (about 1 GB). Later runs use the saved copy.
+Step 3: Write the caption function
+def generate_caption(image, num_beams=5, max_new_tokens=40):
+    image = image.convert("RGB")
+    inputs = processor(images=image, return_tensors="pt").to(device)
+    with torch.no_grad():
+        out = model.generate(**inputs, num_beams=num_beams,
+                             max_new_tokens=max_new_tokens)
+    return processor.decode(out[0], skip_special_tokens=True).strip()
+Part of the code
+What it does
+convert("RGB")
+Makes sure the image has three color channels
+processor(...)
+Resizes and normalizes the image into the tensor the model expects
+model.generate(...)
+Runs the image encoder and the text decoder to create word tokens
+processor.decode(...)
+Turns the word tokens back into a readable sentence
+Step 4: Try it on one image
+img = Image.open("test_images/dog.jpg")
+print(generate_caption(img))
+Step 5: Build the interface
+import gradio as gr
+ 
+def run(image, beams):
+    if image is None:
+        return "Please upload an image."
+    return generate_caption(image, num_beams=int(beams))
+ 
+gr.Interface(
+    fn=run,
+    inputs=[gr.Image(type="pil", label="Upload an image"),
+            gr.Slider(1, 10, value=5, step=1, label="Beam size")],
+    outputs=gr.Textbox(label="Generated caption"),
+    title="Image Caption Generator (BLIP)",
+).launch()
+Step 6: Caption many images at once
+The included script part_a.py captions every image in a folder and saves the results to a CSV file with empty columns for your manual ratings:
+python part_a.py test_images --beams 5 --out part_a_results.csv
+7. Settings That Affect the Caption
+Setting
+Meaning
+Suggested value
+num_beams
+How many candidate sentences are kept at each step. Higher values often give better captions but are slower. A value of 1 is greedy decoding.
+5
+max_new_tokens
+The longest the caption can be
+40
+Prompt (optional)
+A few starting words, such as "a photo of", that the caption must continue from
+None, or try one for comparison
+A good small experiment for the report is to caption the same 10 images with beam sizes 1 and 5 and note the difference.
+8. Testing Plan
+8.1 Test images
+Collect 20 to 30 images that you did not use while building the app, with a mix of the categories below.
+Category
+Examples
+What it tests
+People and activities
+Playing sports, cooking, walking
+Actions and people
+Animals
+Dogs, birds, cattle
+Common object recognition
+Outdoor scenes
+Beach, street, mountain, market
+Scene understanding
+Food and objects
+Meals, vehicles, furniture
+Fine objects
+Crowded or complex
+Festivals, traffic, group photos
+Counting and clutter
+Unusual images
+Paintings, text signs, low light
+Limits of the model
+8.2 Rating scale
+Rate each caption by hand from 1 to 5 for accuracy and for fluency.
+Score
+Accuracy
+Fluency
+5
+Describes the main objects and action correctly
+Natural, grammatical sentence
+4
+Correct, but misses a minor detail
+Fine, with a small awkwardness
+3
+Partly correct
+Understandable but awkward
+2
+Mostly wrong, with one correct element
+Hard to read
+1
+Wrong or unrelated to the image
+Not a proper sentence
+8.3 Results table
+Fill this in after testing. The CSV from part_a.py already has the image names and captions.
+No.
+Image
+Category
+BLIP caption
+Accuracy
+Fluency
+Remarks
+1
+2
+3
+4
+5
+6
+7
+8
+Summary to calculate: average accuracy, average fluency, and the number of captions that scored 4 or 5, compared with those that scored 2 or below.
+9. Strengths and Limitations
+Strengths
+Works immediately, with no training data and no training time.
+Handles many everyday scenes and gives grammatical sentences.
+Easy to run locally and free to use.
+Limitations
+It cannot be changed easily: we did not train it, so we cannot fix its mistakes directly.
+Captions can be short and generic, and may miss small details.
+It can make errors with counting, unusual objects, or text inside images.
+It may reflect biases from its training data, and it can describe things that are not in the image.
+The first run needs an internet connection and about 1 GB of download.
+10. Link to Part B
+Part B trains our own CNN + 2-layer GRU captioning model on Flickr8k. The BLIP results from this part serve as the baseline: they show how far a small model trained from scratch is from a large pre-trained one. The same test images and rating scale should be used in both parts so the comparison is fair.
+11. Conclusion
+Part A shows that a pre-trained vision-language model can caption images accurately without any training by us, and that a useful application can be built with a few lines of code. [Add 2 to 3 sentences about your own test findings: your average ratings, what the model did well, and where it failed.]
+12. References
+Li, J., Li, D., Xiong, C., and Hoi, S. (2022). BLIP: Bootstrapping Language-Image Pre-training for Unified Vision-Language Understanding and Generation. ICML 2022.
+Hugging Face model card: Salesforce/blip-image-captioning-base.
+Hugging Face Transformers documentation, BLIP model.
+PyTorch, Pillow, and Gradio documentation.
+
+=== PROJECT RECOMMENDATIONS ===
+Project Recommendations
+Image Caption Generation: suggestions to strengthen the project
+These are the suggestions I would prioritize, roughly in order of importance.
+1. Get Track A working first
+Finish the BLIP app end to end before touching the GRU. Then you always have a complete, demonstrable project, and Track B becomes an extension that can only make it better. If time runs short, you can still submit a solid project.
+2. Avoid data leakage in the split
+Split Flickr8k by image, not by caption. Each image has 5 captions, and if captions from the same image land in both training and test sets, your scores will look better than they should. Use the official train/validation/test split files if your download includes them. Also have your agent print the number of images in each split, so you can confirm they don't overlap.
+3. Make the evaluation fair
+Lowercase and strip punctuation from every caption (yours, BLIP's, and the human ones) in the same way before computing BLEU.
+Use the same test images for every model.
+Fix random seeds so your results are repeatable.
+Add one or two more metrics if time allows, such as METEOR or CIDEr (the standard captioning metric), alongside BLEU. Several metrics tell a more convincing story than one.
+4. State the BLIP comparison honestly
+BLIP was pre-trained on far more data than your model, and its captioning version was fine-tuned on COCO-style captions. Your report should say that BLIP is a strong reference rather than a fair contest, and that overlap between its training data and your test images can't be fully ruled out. Examiners generally respect this kind of honesty more than inflated results.
+5. Spend your effort on analysis, not just numbers
+The most valuable part of the project is probably the error analysis. Pick 15 to 20 cases and categorize them: wrong object, wrong count, missed action, generic caption, repeated words. Showing where and why your model fails demonstrates real understanding.
+6. Pick one upgrade, not all of them
+If you have time left, choose one extension rather than several:
+Beam search vs greedy decoding is the easiest and a clear improvement.
+1-layer vs 2-layer GRU ablation is cheap and justifies your design.
+Attention is the most impressive but the hardest, so only attempt it if everything else is finished.
+7. Keep the development process disciplined
+Use Git (even just local commits) so you can undo agent changes that break something.
+Run every script yourself and check the output. Don't assume that code the agent wrote works.
+Ask the agent to explain the core files, so you can answer questions in your viva.
+Save training logs and results CSVs as you go, so your report has real evidence.
+8. Plan your compute
+Feature extraction and training on a CPU can be slow. Run those two steps on free Google Colab if your laptop struggles, then download the saved features and checkpoint. Everything else (the app and evaluation) is light enough for a normal machine.
+9. Improve the demo
+Show the GRU and BLIP captions side by side, so the comparison is visible at a glance.
+Prepare a small set of demo images in advance, including a few where the model fails, and explain why.
+Take screenshots in case the live demo has problems on presentation day.
+10. Add a short limitations section
+Mention these in your report:
+Captions can reflect biases in the training data.
+The models can describe things that aren't there.
+Photos of people raise privacy considerations.
+Results on Flickr8k may not carry over to other kinds of images.
+This takes one paragraph and makes the report look more mature.
+If you have to pick three
+If time is limited, do these: (1) finish Track A first, (2) split the data by image and evaluate fairly, and (3) write a good error analysis. Those three will add more value than any extra model feature.

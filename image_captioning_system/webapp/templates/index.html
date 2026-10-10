@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<!-- ==========================================================================
+     HERO SECTION — HIGH IMPACT & INTENTIONAL COMPOSITION
+     ========================================================================== -->
+<section class="hero-section">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <!-- Left Hero Column: Copy & Actions -->
+      <div class="col-lg-6">
+        <div class="hero-badge">
+          <i class="bi bi-shield-check"></i>
+          <span>Trained Locally &bull; NVIDIA CUDA Accelerated</span>
+        </div>
+
+        <h1 class="hero-title">
+          Show it a photo.<br>
+          <span class="highlight">Get a sentence.</span>
+        </h1>
+
+        <p class="hero-desc">
+          Caption Lens transforms images into natural-language descriptions using a pretrained vision-language model and a custom CNN + GRU captioning architecture trained from scratch.
+        </p>
+
+        <div class="hero-cta-group">
+          <a class="btn-primary-lens" href="#demo">
+            <span>Try Caption Lens</span>
+            <i class="bi bi-arrow-right"></i>
+          </a>
+          <a class="btn-ghost-lens" href="{{ url_for('research') }}">
+            <span>Explore the Research</span>
+            <i class="bi bi-arrow-down-short"></i>
+          </a>
+        </div>
+
+        <div class="hero-meta-row">
+          <div class="meta-metric-item">
+            <span class="meta-metric-val">8,091</span>
+            <span class="meta-metric-lbl">Flickr8k Images</span>
+          </div>
+          <div class="meta-metric-item">
+            <span class="meta-metric-val">0.6041</span>
+            <span class="meta-metric-lbl">Custom GRU BLEU-1</span>
+          </div>
+          <div class="meta-metric-item">
+            <span class="meta-metric-val">2 Models</span>
+            <span class="meta-metric-lbl">Side-by-Side</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Hero Column: Interactive Product Visual Preview -->
+      <div class="col-lg-6">
+        <div class="product-preview-card">
+          <div class="preview-card-header">
+            <div class="preview-dots">
+              <span class="preview-dot"></span>
+              <span class="preview-dot"></span>
+              <span class="preview-dot"></span>
+            </div>
+            <span class="preview-tag">LIVE DUAL INFERENCE</span>
+          </div>
+
+          <div class="preview-media">
+            <img class="preview-img" src="{{ url_for('static', filename='samples/dog.jpg') }}" alt="Product preview demonstration showing black dog">
+            <div class="preview-scan-line"></div>
+          </div>
+
+          <div class="preview-card-body">
+            <div class="preview-result-block blip-preview">
+              <div class="preview-label-row">
+                <span class="text-cyan"><i class="bi bi-stars me-1"></i>BLIP PRETRAINED BASELINE</span>
+                <span class="text-tertiary">Beam Width 5</span>
+              </div>
+              <p class="preview-caption-text">"a black dog sitting on top of a wooden floor"</p>
+            </div>
+
+            <div class="preview-result-block gru-preview">
+              <div class="preview-label-row">
+                <span style="color: var(--violet);"><i class="bi bi-cpu me-1"></i>OUR CUSTOM CNN + 2-LAYER GRU</span>
+                <span class="text-tertiary">Trained on Flickr8k</span>
+              </div>
+              <p class="preview-caption-text">"a black dog is standing on a wooden path"</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================================================
+     INFERENCE STUDIO GATEWAY (CLEAN, DISTRACTION-FREE WORKSPACE LAUNCHER)
+     ========================================================================== -->
+<section class="section-wrapper py-5" id="studio-gateway">
+  <div class="container">
+    <div class="studio-gateway-card">
+      <div class="row align-items-center g-4">
+        <div class="col-lg-7">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="badge rounded-pill text-cyan px-3 py-1 font-mono" style="background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.3); font-size: 0.72rem; letter-spacing: 0.05em;">
+              <span class="pulse-dot me-1"></span> DEDICATED INFERENCE WORKSPACE
+            </span>
+            <span class="text-tertiary font-mono" style="font-size: 0.8rem;">RTX 4050 GPU Accelerated</span>
+          </div>
+          <h2 class="display-6 fw-bold mb-3 text-white">Experience Caption Studio</h2>
+          <p class="text-secondary fs-5 mb-4" style="max-width: 600px; line-height: 1.6;">
+            A dedicated, distraction-free laboratory environment engineered for clean screenshot capture and side-by-side inference across Salesforce BLIP, our Vision-Language Transformer (ViT + GPT-2), and classical CNN-GRU baselines.
+          </p>
+          <div class="d-flex flex-wrap gap-3">
+            <a href="{{ url_for('studio') }}" class="btn-primary-lens btn-lg px-4 py-3 fs-6">
+              <i class="bi bi-lightning-charge-fill me-2"></i>
+              <span>Launch Caption Studio</span>
+              <i class="bi bi-arrow-right ms-2"></i>
+            </a>
+            <a href="{{ url_for('research') }}" class="btn-ghost-lens btn-lg px-4 py-3 fs-6">
+              <i class="bi bi-graph-up me-2"></i>
+              <span>View Research Benchmarks</span>
+            </a>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="gateway-preview-visual">
+            <div class="gateway-preview-header">
+              <span class="window-dot red"></span>
+              <span class="window-dot yellow"></span>
+              <span class="window-dot green"></span>
+              <span class="font-mono text-tertiary ms-2" style="font-size: 0.72rem;">caption_lens_studio.py</span>
+            </div>
+            <div class="gateway-preview-body p-3">
+              <div class="mini-model-pill mb-2">
+                <span class="badge text-cyan bg-dark border border-cyan" style="font-size: 0.7rem; width: fit-content;">Salesforce BLIP (Foundation)</span>
+                <span class="text-light" style="font-size: 0.86rem;">"A view from the top of a mountain."</span>
+              </div>
+              <div class="mini-model-pill mb-2">
+                <span class="badge text-success bg-dark border border-success" style="font-size: 0.7rem; width: fit-content;">Our ViT + GPT-2 (Cross-Attention)</span>
+                <span class="text-light" style="font-size: 0.86rem;">"A large body of water with mountains."</span>
+              </div>
+              <div class="mini-model-pill">
+                <span class="badge text-warning bg-dark border border-warning" style="font-size: 0.7rem; width: fit-content;">Ablation Baseline (CNN + GRU)</span>
+                <span class="text-secondary" style="font-size: 0.82rem;">"A man in a red jacket is standing..."</span>
+              </div>
+            </div>
+            <div class="gateway-preview-footer px-3 py-2 text-tertiary font-mono d-flex justify-content-between align-items-center" style="font-size: 0.72rem; border-top: 1px solid rgba(255,255,255,0.06);">
+              <span>⚡ RTX 4050 Laptop GPU</span>
+              <span class="text-cyan"><a href="{{ url_for('studio') }}" class="text-cyan text-decoration-none">Open Studio &rarr;</a></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================================================
+     SYSTEM ARCHITECTURE (HOW IT WORKS)
+     ========================================================================== -->
+<section class="section-wrapper" id="how">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-eyebrow">End-to-End Pipeline</span>
+      <h2 class="section-title">How the System Works</h2>
+      <p class="section-subtitle">
+        Visual information flows through feature abstraction, linear hidden projection, and autoregressive sequential word decoding.
+      </p>
+    </div>
+
+    <div class="arch-pipeline">
+      <!-- Stage 1 -->
+      <div class="arch-node">
+        <div class="node-step-num">Stage 01</div>
+        <div class="node-icon"><i class="bi bi-aspect-ratio"></i></div>
+        <div class="node-title">Image Preprocessing</div>
+        <p class="node-desc">Input image is converted to RGB, resized to 256px, center-cropped to 224&times;224, and normalized with ImageNet statistics.</p>
+      </div>
+
+      <!-- Stage 2 -->
+      <div class="arch-node">
+        <div class="node-step-num">Stage 02</div>
+        <div class="node-icon"><i class="bi bi-bounding-box"></i></div>
+        <div class="node-title">ResNet-50 Encoder</div>
+        <p class="node-desc">Frozen convolutional backbone extracts a compact 2048-dimensional visual feature vector representing semantic image content.</p>
+      </div>
+
+      <!-- Stage 3 -->
+      <div class="arch-node">
+        <div class="node-step-num">Stage 03</div>
+        <div class="node-icon"><i class="bi bi-arrow-left-right"></i></div>
+        <div class="node-title">Linear Hidden State Init</div>
+        <p class="node-desc">A linear projection with tanh activation transforms the 2048-d features into the initial hidden states <code>h₀</code> for both GRU layers.</p>
+      </div>
+
+      <!-- Stage 4 -->
+      <div class="arch-node">
+        <div class="node-step-num">Stage 04</div>
+        <div class="node-icon"><i class="bi bi-cpu"></i></div>
+        <div class="node-title">2-Layer GRU Decoder</div>
+        <p class="node-desc">At each timestep <code>t</code>, word embeddings (256-d) and previous hidden states predict the probability distribution over 2,656 vocabulary words.</p>
+      </div>
+
+      <!-- Stage 5 -->
+      <div class="arch-node">
+        <div class="node-step-num">Stage 05</div>
+        <div class="node-icon"><i class="bi bi-chat-left-text"></i></div>
+        <div class="node-title">Beam Search Generation</div>
+        <p class="node-desc">Maintains the top <code>k</code> candidate hypotheses at each step until <code>&lt;end&gt;</code> token is emitted, producing a grammatical sentence.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================================================
+     TWO MODELS. ONE IMAGE. (MODEL COMPARISON)
+     ========================================================================== -->
+<section class="section-wrapper" id="models">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-eyebrow">Comparative Design</span>
+      <h2 class="section-title">Two models. One image.</h2>
+      <p class="section-subtitle">
+        We compare a massive pre-trained multimodal vision-language foundation model against our compact convolutional recurrent model trained from scratch.
+      </p>
+    </div>
+
+    <div class="comparison-grid">
+      <!-- Model A: BLIP -->
+      <div class="model-spec-card blip-spec">
+        <div class="model-spec-role">Baseline Foundation Model</div>
+        <h3 class="model-spec-title">Salesforce BLIP (Base)</h3>
+        <p class="text-secondary">
+          A pretrained vision-language foundation model pre-trained on millions of image-text pairs with CapFilt bootstrap filtering and fine-tuned on COCO. Used as a strong reference baseline.
+        </p>
+        <ul class="spec-list">
+          <li><span class="spec-label">Encoder Architecture</span><span class="spec-value">Vision Transformer (ViT-B/16)</span></li>
+          <li><span class="spec-label">Language Decoder</span><span class="spec-value">Multimodal Transformer (12 layers)</span></li>
+          <li><span class="spec-label">Pre-training Data</span><span class="spec-value">14M Web pairs + COCO fine-tuning</span></li>
+          <li><span class="spec-label">Parameter Scale</span><span class="spec-value">~224 Million parameters</span></li>
+          <li><span class="spec-label">Local Role</span><span class="spec-value">Reference & Pseudo-ground-truth</span></li>
+        </ul>
+      </div>
+
+      <!-- Model B: Custom CNN + GRU -->
+      <div class="model-spec-card gru-spec">
+        <div class="model-spec-role">Our Custom Architecture</div>
+        <h3 class="model-spec-title">CNN + 2-Layer GRU</h3>
+        <p class="text-secondary">
+          Our custom architecture trained from scratch on Flickr8k. Uses a frozen ResNet-50 visual encoder to eliminate GPU compute bottleneck, paired with a custom 2-layer recurrent GRU language decoder.
+        </p>
+        <ul class="spec-list">
+          <li><span class="spec-label">Encoder Architecture</span><span class="spec-value">ResNet-50 (Frozen 2048-d)</span></li>
+          <li><span class="spec-label">Language Decoder</span><span class="spec-value">2-Layer GRU (512 hidden units)</span></li>
+          <li><span class="spec-label">Training Dataset</span><span class="spec-value">Flickr8k (6,473 images / 32k pairs)</span></li>
+          <li><span class="spec-label">Vocabulary Size</span><span class="spec-value">2,656 tokens (min-freq &ge; 5)</span></li>
+          <li><span class="spec-label">Regularization</span><span class="spec-value">Dropout 0.5 + Early Stopping</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================================================
+     QUANTITATIVE RESULTS & QUALITATIVE BENCHMARK
+     ========================================================================== -->
+<section class="section-wrapper" id="results">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-eyebrow">Empirical Evaluation</span>
+      <h2 class="section-title">Measured Performance</h2>
+      <p class="section-subtitle">
+        Actual quantitative BLEU benchmark scores evaluated on the 809-image held-out test split, evaluated against all 5 human reference captions.
+      </p>
+    </div>
+
+    <!-- Official Metrics Table -->
+    <div class="metrics-table-wrapper">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th>Model Configuration</th>
+            <th>BLEU-1</th>
+            <th>BLEU-2</th>
+            <th>BLEU-3</th>
+            <th>BLEU-4</th>
+            <th>BLIP Agreement</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong>Custom GRU (Greedy Decoding)</strong>
+              <div class="text-tertiary" style="font-size: 0.78rem;">argmax token at every step</div>
+            </td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_greedy.bleu1 if metrics.gru_greedy else '0.5922' }}</span></td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_greedy.bleu2 if metrics.gru_greedy else '0.4168' }}</span></td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_greedy.bleu3 if metrics.gru_greedy else '0.2789' }}</span></td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_greedy.bleu4 if metrics.gru_greedy else '0.1861' }}</span></td>
+            <td><span class="score-badge">{{ metrics.gru_greedy.agreement if metrics.gru_greedy else '0.3199' }}</span></td>
+          </tr>
+          <tr>
+            <td>
+              <strong>Custom GRU (Beam Search, width=3)</strong>
+              <div class="text-tertiary" style="font-size: 0.78rem;">length-normalized top-3 sequence search</div>
+            </td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_beam.bleu1 if metrics.gru_beam else '0.6041' }}</span></td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_beam.bleu2 if metrics.gru_beam else '0.4244' }}</span></td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_beam.bleu3 if metrics.gru_beam else '0.2922' }}</span></td>
+            <td><span class="score-badge score-violet">{{ metrics.gru_beam.bleu4 if metrics.gru_beam else '0.2004' }}</span></td>
+            <td><span class="score-badge">{{ metrics.gru_beam.agreement if metrics.gru_beam else '0.3344' }}</span></td>
+          </tr>
+          <tr>
+            <td>
+              <strong>BLIP Pre-trained Baseline</strong>
+              <div class="text-tertiary" style="font-size: 0.78rem;">Salesforce base model (Beam Width 5)</div>
+            </td>
+            <td><span class="score-badge score-cyan">{{ metrics.blip.bleu1 if metrics.blip else '0.6453' }}</span></td>
+            <td><span class="score-badge score-cyan">{{ metrics.blip.bleu2 if metrics.blip else '0.4924' }}</span></td>
+            <td><span class="score-badge score-cyan">{{ metrics.blip.bleu3 if metrics.blip else '0.3730' }}</span></td>
+            <td><span class="score-badge score-cyan">{{ metrics.blip.bleu4 if metrics.blip else '0.2839' }}</span></td>
+            <td><span class="score-badge text-tertiary">(Reference)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Qualitative Test Set Samples Preview -->
+    <div class="mt-5">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Test Split Qualitative Comparisons</h4>
+        <a class="btn-ghost-lens" href="{{ url_for('research') }}#evaluation" style="font-size: 0.82rem; padding: 0.4rem 0.85rem;">
+          <span>View All 200 Test Samples in Research</span>
+          <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+
+      <div class="samples-preview-grid">
+        {% for s in samples[:4] %}
+        <div class="sample-row-card">
+          <div class="font-mono text-tertiary mb-1" style="font-size: 0.75rem;">SAMPLE: {{ s.image }}</div>
+          <div class="sample-ref-text">
+            <strong>Human Reference:</strong> "{{ s.human }}"
+          </div>
+          <div class="sample-preds-row">
+            <div class="pred-pill blip">
+              <b>BLIP:</b> "{{ s.blip }}"
+            </div>
+            <div class="pred-pill gru">
+              <b>OUR GRU:</b> "{{ s.gru }}"
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================================================
+     WHERE CAPTION LENS STRUGGLES (SCIENTIFIC FAILURE MODES)
+     ========================================================================== -->
+<section class="section-wrapper limitations-section" id="limitations">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-eyebrow" style="color: var(--amber);">Academic Transparency</span>
+      <h2 class="section-title">Where Caption Lens struggles</h2>
+      <p class="section-subtitle">
+        Caption generation quality degrades as scene complexity increases. Real generative systems encounter distinct failure modes due to architecture and dataset boundaries.
+      </p>
+    </div>
+
+    <div class="failure-grid">
+      <!-- Limitation 1 -->
+      <div class="failure-card">
+        <div class="failure-badge"><i class="bi bi-people"></i> Subject Competition</div>
+        <div class="failure-title">Multiple Objects & Crowds</div>
+        <p class="failure-desc">
+          When an image contains multiple people, vehicles, and overlapping elements, the model must choose which object to prioritize. Simpler single-subject images succeed reliably, whereas crowded scenes often cause omission of key background subjects.
+        </p>
+      </div>
+
+      <!-- Limitation 2 -->
+      <div class="failure-card">
+        <div class="failure-badge"><i class="bi bi-eye-slash"></i> Feature Dissipation</div>
+        <div class="failure-title">Small & Occluded Objects</div>
+        <p class="failure-desc">
+          Objects that are distant, partially obscured, or low in pixel density produce weak activation footprints in the 2048-d ResNet feature map. The decoder frequently produces overly generic descriptions instead of recognizing subtle props.
+        </p>
+      </div>
+
+      <!-- Limitation 3 -->
+      <div class="failure-card">
+        <div class="failure-badge"><i class="bi bi-arrows-move"></i> Relational Bottleneck</div>
+        <div class="failure-title">Spatial & Action Relationships</div>
+        <p class="failure-desc">
+          Detecting individual object classes is substantially easier than understanding spatial interactions (e.g., <em>who is holding what</em> or <em>standing behind whom</em>). A non-attentive GRU decoder cannot selectively attend to spatial coordinates across timesteps.
+        </p>
+      </div>
+
+      <!-- Limitation 4 -->
+      <div class="failure-card">
+        <div class="failure-badge"><i class="bi bi-database-exclamation"></i> Vocabulary Bounds</div>
+        <div class="failure-title">Dataset Coverage Limits</div>
+        <p class="failure-desc">
+          Flickr8k contains 8,000 images focused on outdoor recreation and animals. Unfamiliar domains (scientific instruments, anime art, medical scans) are mapped to familiar approximations (e.g., a snowmobile predicted as a <em>"bike in the snow"</em>).
+        </p>
+      </div>
+
+      <!-- Limitation 5 -->
+      <div class="failure-card">
+        <div class="failure-badge"><i class="bi bi-link-45deg"></i> Error Propagation</div>
+        <div class="failure-title">Sequential Decoding Cascade</div>
+        <p class="failure-desc">
+          Because the GRU generates captions autoregressively, predicting word <code>wₜ</code> conditioned on <code>wₜ₋₁</code>, an incorrect early token steers subsequent hidden states away from ground truth, occasionally resulting in repetitive phrasing.
+        </p>
+      </div>
+
+      <!-- Limitation 6 -->
+      <div class="failure-card">
+        <div class="failure-badge"><i class="bi bi-stars"></i> Generative Plausibility</div>
+        <div class="failure-title">Caption Hallucination</div>
+        <p class="failure-desc">
+          The language model may generate a plausible-sounding grammatical phrase (such as <em>"in a grassy park"</em>) simply because that n-gram appeared frequently in training annotations alongside <em>"a dog"</em>, even if the image background is concrete.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================================================
+     TECHNOLOGY ECOSYSTEM
+     ========================================================================== -->
+<section class="section-wrapper py-5">
+  <div class="container text-center">
+    <span class="section-eyebrow">Open-Source Research Stack</span>
+    <h3 class="mb-3">Built with Standard Machine Learning Tooling</h3>
+    <p class="text-secondary mx-auto mb-4" style="max-width: 580px;">
+      Zero paid APIs or external inference dependencies. The entire system is engineered in Python and runs locally on NVIDIA hardware.
+    </p>
+    <div class="d-flex justify-content-center flex-wrap gap-2">
+      <span class="tech-pill"><i class="bi bi-cpu me-1 text-cyan"></i> Python 3.14</span>
+      <span class="tech-pill"><i class="bi bi-fire me-1 text-danger"></i> PyTorch 2.14+cu126</span>
+      <span class="tech-pill"><i class="bi bi-box me-1 text-warning"></i> Torchvision ResNet-50</span>
+      <span class="tech-pill"><i class="bi bi-robot me-1 text-info"></i> Hugging Face Transformers</span>
+      <span class="tech-pill"><i class="bi bi-stars me-1 text-cyan"></i> Salesforce BLIP</span>
+      <span class="tech-pill"><i class="bi bi-bar-chart me-1 text-success"></i> NLTK BLEU Metrics</span>
+      <span class="tech-pill"><i class="bi bi-database me-1 text-secondary"></i> Flickr8k Dataset</span>
+      <span class="tech-pill"><i class="bi bi-window me-1 text-primary"></i> Flask Microframework</span>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/demo.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Models{% endblock %}
+{% block content %}
+<section><div class="container">
+<h2 class="mb-4">Models and training</h2>
+<div class="row g-4">
+  <div class="col-lg-6"><div class="card-x h-100">
+    <h3 class="h5">Dataset</h3>
+    <p class="muted">Flickr8k: 8,000 images with 5 human captions each, split by image into train, validation, and test sets (about 80/10/10). Splitting by image keeps captions of one picture out of both training and test data.</p>
+    <h3 class="h5 mt-4">Architecture</h3>
+    <p class="muted mb-0">A frozen ResNet-50 turns each image into 2048 numbers. A linear layer maps them to the starting memory of a 2-layer GRU, which writes the caption one word at a time. Only the GRU side is trained.</p>
+  </div></div>
+  <div class="col-lg-6"><div class="card-x h-100">
+    <h3 class="h5 mb-3">Hyperparameters</h3>
+    <table class="table tbl"><tbody>{% for k, v in hp.items() %}<tr><td class="muted">{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</tbody></table>
+  </div></div>
+</div>
+<div class="card-x mt-4"><h3 class="h5 mb-3">Training log</h3>
+{% if log %}
+<div class="table-responsive"><table class="table tbl align-middle"><thead><tr><th>Epoch</th><th>Train loss</th><th colspan="2">Validation loss</th></tr></thead><tbody>
+{% for r in log %}<tr><td>{{ r.epoch }}</td><td>{{ r.train_loss }}</td><td style="width:45%"><div class="bar"><span style="width:{{ r.pct }}%"></span></div></td><td>{{ r.val_loss }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}<p class="muted mb-0">No training log yet. Save <code>results/train_log.csv</code> with the columns <code>epoch,train_loss,val_loss</code> and it will appear here.</p>{% endif %}
+</div></div></section>
+{% endblock %}

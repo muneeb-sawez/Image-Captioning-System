@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Datasets (Images, zip files, annotation raw folders)
+**/data/
+**/Images/
+**/images/
+**/flickr30k-images/
+**/flickr8k-images/
+**/coco_images/
+*.zip
+*.tar.gz
+*.tar
+*.tgz
+
+# Heavy Model Checkpoints & Pre-extracted Tensors (>100MB rejected by GitHub)
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.h5
+*.npy
+**/checkpoints/*.pt
+**/work/features.pt
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
