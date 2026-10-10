@@ -28,8 +28,14 @@ env/
 *.bin
 *.h5
 *.npy
-**/checkpoints/*.pt
 **/work/features.pt
+
+# Allow lightweight trained GRU checkpoint (29MB) so the webapp works out of the box
+!image_captioning_system/webapp/checkpoints/gru_best.pt
+!image_captioning_system/checkpoints/gru_best.pt
+
+# Explicitly ignore 2GB checkpoint
+vit_gpt2_flickr30k_25k.pt
 
 # System & IDE files
 .DS_Store
